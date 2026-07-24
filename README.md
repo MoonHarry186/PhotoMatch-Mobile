@@ -1,56 +1,73 @@
-# Welcome to your Expo app 👋
+# PhotoMatch Mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Expo SDK 57 / React Native 0.86 application for the PhotoMatch MVP.
 
-## Get started
+## Prerequisites
 
-1. Install dependencies
+- Node 22.23.1 (`nvm use`; minimum 22.13)
+- npm 10+
+- Xcode 26.4+ for iOS 16.4+
+- Android Studio with API 36; supported devices use Android 7+
+- The sibling `photomatch-api` project and its exported `openapi.json`
 
-   ```bash
-   npm install
-   ```
+## Setup
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```sh
+nvm use
+npm ci
+cp .env.example .env.local
+npm run generate:api
+npm run start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Use an Expo development build for Maps, Apple/Google OAuth, Notifications and other native
+capabilities:
 
-### Other setup steps
+```sh
+npx expo run:ios
+npx expo run:android
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+The iOS simulator cannot validate every Apple sign-in or push path. Use physical iOS and Android
+devices before promotion.
 
-## Learn more
+## Environments and credentials
 
-To learn more about developing your project with Expo, look at the following resources:
+`EXPO_PUBLIC_*` values are bundled into the app and must never contain a server secret. Native
+OAuth credentials, signing credentials and provider secrets belong in EAS/native credential
+stores. See [credential-runbook.md](docs/readiness/credential-runbook.md) and `.env.example`.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Build profiles:
 
-## Join the community
+```sh
+eas build --profile development --platform ios
+eas build --profile preview --platform all
+eas build --profile staging --platform all
+eas build --profile production --platform all
+```
 
-Join our community of developers creating universal apps.
+## Contract and quality commands
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```sh
+npm run generate:api
+npm run check:paths
+npm run format:check
+npm run lint
+npm run typecheck
+npm test
+npm run expo:config
+npm run expo:export
+npm run test:e2e
+```
+
+Generated code in `src/generated/api` is never edited manually. Export the backend contract first
+with `npm run openapi:export` in `photomatch-api`.
+
+## Troubleshooting
+
+- If Metro resolves stale generated files, run `npm run start:clear`.
+- If the default shell uses an older Node, run `nvm use` and confirm `node --version`.
+- `localhost` means the device itself. Use the computer's LAN address for a physical-device API
+  URL.
+- Missing Maps/OAuth values intentionally leave provider features unavailable; do not add fake
+  production credentials to source.

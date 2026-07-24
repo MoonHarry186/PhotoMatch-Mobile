@@ -1,0 +1,18 @@
+appId: vn.photomatch.mobile.dev
+tags:
+  - auth
+  - mock-backend
+---
+- launchApp:
+    clearState: true
+- tapOn: 'Email'
+- inputText: 'invalid@example.com'
+- tapOn: 'Mật khẩu'
+- inputText: 'wrong-password'
+- tapOn: 'Đăng nhập'
+- assertVisible: 'Email hoặc mật khẩu không đúng.'
+- tapOn: 'Quên mật khẩu?'
+- tapOn: 'Email'
+- inputText: 'unknown@example.com'
+- tapOn: 'Gửi hướng dẫn'
+- assertVisible: 'Nếu email tồn tại.*'

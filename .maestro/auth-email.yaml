@@ -1,0 +1,19 @@
+appId: vn.photomatch.mobile.dev
+tags:
+  - auth
+  - mock-backend
+---
+- launchApp:
+    clearState: true
+- assertVisible: 'Chào mừng trở lại'
+- tapOn: 'Tạo tài khoản mới'
+- assertVisible: 'Tạo tài khoản'
+- tapOn: 'Email'
+- inputText: 'mobile.e2e@example.com'
+- tapOn: 'Mật khẩu'
+- inputText: 'StrongPassword1'
+- tapOn: 'Nhập lại mật khẩu'
+- inputText: 'StrongPassword1'
+- tapOn: 'Tôi đồng ý rõ ràng.*'
+- tapOn: 'Tạo tài khoản'
+- assertVisible: 'Xác minh email'

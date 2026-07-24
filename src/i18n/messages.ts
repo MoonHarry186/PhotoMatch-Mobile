@@ -1,0 +1,53 @@
+export const messages = {
+  vi: {
+    'common.retry': 'Thử lại',
+    'common.cancel': 'Hủy',
+    'common.continue': 'Tiếp tục',
+    'common.unknown': 'Không xác định',
+    'auth.signIn': 'Đăng nhập',
+    'auth.signUp': 'Tạo tài khoản',
+    'auth.email': 'Email',
+    'auth.password': 'Mật khẩu',
+    'auth.confirmPassword': 'Nhập lại mật khẩu',
+    'auth.forgotPassword': 'Quên mật khẩu?',
+    'auth.createAccount': 'Tạo tài khoản mới',
+    'auth.invalidCredentials': 'Email hoặc mật khẩu không đúng.',
+    'auth.neutralRecovery':
+      'Nếu email tồn tại, hướng dẫn đặt lại mật khẩu sẽ được gửi.',
+    'state.loading': 'Đang tải…',
+    'state.offline': 'Bạn đang ngoại tuyến.',
+    'state.empty': 'Chưa có dữ liệu.',
+    'state.error': 'Đã có lỗi xảy ra.',
+    'tabs.discovery': 'Khám phá',
+    'tabs.nearby': 'Gần đây',
+    'tabs.messages': 'Tin nhắn',
+    'tabs.profile': 'Hồ sơ',
+  },
+  en: {
+    'common.retry': 'Try again',
+    'common.cancel': 'Cancel',
+    'common.continue': 'Continue',
+    'common.unknown': 'Unknown',
+    'auth.signIn': 'Sign in',
+    'auth.signUp': 'Create account',
+    'auth.email': 'Email',
+    'auth.password': 'Password',
+    'auth.confirmPassword': 'Confirm password',
+    'auth.forgotPassword': 'Forgot password?',
+    'auth.createAccount': 'Create an account',
+    'auth.invalidCredentials': 'The email or password is incorrect.',
+    'auth.neutralRecovery':
+      'If the email exists, password reset instructions will be sent.',
+    'state.loading': 'Loading…',
+    'state.offline': 'You are offline.',
+    'state.empty': 'Nothing here yet.',
+    'state.error': 'Something went wrong.',
+    'tabs.discovery': 'Discovery',
+    'tabs.nearby': 'Nearby',
+    'tabs.messages': 'Messages',
+    'tabs.profile': 'Profile',
+  },
+} as const;
+
+export type Locale = keyof typeof messages;
+export type MessageKey = keyof (typeof messages)['vi'];
