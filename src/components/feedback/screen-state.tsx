@@ -51,13 +51,6 @@ export const EmptyState = (props: Partial<Props>) => (
 export const NoResultsState = (props: Partial<Props>) => (
   <State title={props.title ?? 'Không tìm thấy kết quả'} {...props} />
 );
-export const ErrorState = (props: Partial<Props>) => (
-  <State
-    title={props.title ?? 'Đã có lỗi xảy ra'}
-    actionLabel="Thử lại"
-    {...props}
-  />
-);
 export const OfflineState = (props: Partial<Props>) => (
   <State
     title={props.title ?? 'Bạn đang ngoại tuyến'}

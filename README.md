@@ -63,6 +63,9 @@ npm run test:e2e
 Generated code in `src/generated/api` is never edited manually. Export the backend contract first
 with `npm run openapi:export` in `photomatch-api`.
 
+The shared error architecture, UI decision rules and feature examples are documented in
+[error-handling.md](docs/error-handling.md).
+
 ## Troubleshooting
 
 - If Metro resolves stale generated files, run `npm run start:clear`.

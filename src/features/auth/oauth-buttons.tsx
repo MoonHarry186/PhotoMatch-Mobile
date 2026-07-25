@@ -8,7 +8,7 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/ui';
 import { env } from '@/config/env';
 import { useSession } from '@/providers/session-provider';
-import { ApiError } from '@/services/api/api-error';
+import { AppError, getUserErrorMessage } from '@/core/errors';
 import { spacing } from '@/theme';
 
 import { authApi } from './auth.api';
@@ -46,8 +46,8 @@ function GoogleOAuthButton() {
         );
       } catch (caught) {
         setError(
-          caught instanceof ApiError
-            ? caught.message
+          caught instanceof AppError
+            ? getUserErrorMessage(caught)
             : 'Không thể đăng nhập với Google.',
         );
       } finally {
@@ -121,8 +121,8 @@ export function OAuthButtons() {
     } catch (caught) {
       if (isOAuthCancellation(caught)) return;
       setAppleError(
-        caught instanceof ApiError
-          ? caught.message
+        caught instanceof AppError
+          ? getUserErrorMessage(caught)
           : 'Không thể đăng nhập với Apple.',
       );
     } finally {

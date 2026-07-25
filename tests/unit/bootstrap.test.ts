@@ -80,9 +80,10 @@ describe('resolveGate', () => {
     expect(
       isTerminalSessionError(
         new ApiError({
-          code: 'REFRESH_TOKEN_REUSED',
+          code: 'UNAUTHORIZED',
           message: 'Revoked',
           status: 401,
+          businessCode: 'REFRESH_TOKEN_REUSED',
         }),
       ),
     ).toBe(true);

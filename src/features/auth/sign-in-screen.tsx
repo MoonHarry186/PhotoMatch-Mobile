@@ -6,7 +6,7 @@ import type { z } from 'zod';
 
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button, TextField } from '@/components/ui';
-import { ApiError } from '@/services/api/api-error';
+import { AppError, getUserErrorMessage } from '@/core/errors';
 import { spacing } from '@/theme';
 import { useSession } from '@/providers/session-provider';
 import { useI18n } from '@/i18n/i18n-provider';
@@ -35,12 +35,14 @@ export function SignInScreen() {
     try {
       await session.acceptSession(await authApi.signIn(value));
     } catch (caught) {
-      const error = caught instanceof ApiError ? caught : null;
+      const error = caught instanceof AppError ? caught : null;
       setError('root', {
         message:
-          error?.code === 'INVALID_CREDENTIALS'
+          error?.businessCode === 'INVALID_CREDENTIALS'
             ? 'Email hoặc mật khẩu không đúng.'
-            : (error?.message ?? 'Không thể đăng nhập.'),
+            : error
+              ? getUserErrorMessage(error)
+              : 'Không thể đăng nhập.',
       });
     }
   });

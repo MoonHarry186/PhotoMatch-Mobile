@@ -46,10 +46,14 @@ describe('auth API integration adapter', () => {
         message: 'Invalid',
         requestId: 'r1',
       },
+      response: new Response('', { status: 401 }),
     });
     await expect(
       authApi.signIn({ email: 'user@example.com', password: 'bad' }),
-    ).rejects.toMatchObject({ code: 'INVALID_CREDENTIALS' });
+    ).rejects.toMatchObject({
+      code: 'UNAUTHORIZED',
+      businessCode: 'INVALID_CREDENTIALS',
+    });
     expect(authControllerSignIn).toHaveBeenCalledWith({
       body: {
         email: 'user@example.com',

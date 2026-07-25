@@ -6,7 +6,7 @@ import type { z } from 'zod';
 
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button, TextField } from '@/components/ui';
-import { ApiError } from '@/services/api/api-error';
+import { AppError, getUserErrorMessage } from '@/core/errors';
 
 import { authApi } from './auth.api';
 import { AuthHeader } from './auth-header';
@@ -31,12 +31,15 @@ export function ResetPasswordScreen() {
       await authApi.resetPassword({ token: resetToken, newPassword });
       router.replace('/(auth)/sign-in');
     } catch (caught) {
-      const error = caught instanceof ApiError ? caught : null;
+      const error = caught instanceof AppError ? caught : null;
       setError('root', {
         message:
-          error?.code === 'TOKEN_INVALID' || error?.code === 'TOKEN_EXPIRED'
+          error?.businessCode === 'TOKEN_INVALID' ||
+          error?.businessCode === 'TOKEN_EXPIRED'
             ? 'Liên kết đặt lại đã hết hạn hoặc đã được sử dụng.'
-            : (error?.message ?? 'Không thể đặt lại mật khẩu.'),
+            : error
+              ? getUserErrorMessage(error)
+              : 'Không thể đặt lại mật khẩu.',
       });
     }
   });

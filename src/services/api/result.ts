@@ -1,4 +1,4 @@
-import { toApiError } from './api-error';
+import { normalizeError } from '@/core/errors';
 
 type GeneratedResult<T> = {
   data?: T;
@@ -8,5 +8,5 @@ type GeneratedResult<T> = {
 
 export function unwrap<T>(result: GeneratedResult<T>): NonNullable<T> {
   if (result.data !== undefined) return result.data as NonNullable<T>;
-  throw toApiError(result.error, result.response);
+  throw normalizeError(result.error, result.response);
 }

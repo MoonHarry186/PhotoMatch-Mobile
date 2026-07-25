@@ -10,6 +10,7 @@ import {
 } from 'react';
 
 import { env } from '@/config/env';
+import { normalizeError } from '@/core/errors';
 import {
   authControllerRefresh,
   authControllerSignOut,
@@ -141,10 +142,9 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
       }
       await loadSnapshot();
     } catch (caught) {
-      const resolved =
-        caught instanceof Error ? caught : new Error('Bootstrap failed');
+      const resolved = normalizeError(caught);
       setError(resolved);
-      setStatus(resolved.message.includes('Network') ? 'offline' : 'error');
+      setStatus(resolved.code === 'NETWORK_ERROR' ? 'offline' : 'error');
     }
   }, [loadSnapshot, refresh]);
 
@@ -180,10 +180,9 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
         if (token) await loadSnapshot();
         else setStatus('ready');
       } catch (caught) {
-        const resolved =
-          caught instanceof Error ? caught : new Error('Bootstrap failed');
+        const resolved = normalizeError(caught);
         setError(resolved);
-        setStatus('offline');
+        setStatus(resolved.code === 'NETWORK_ERROR' ? 'offline' : 'error');
       }
     })();
   }, [loadSnapshot, refresh]);

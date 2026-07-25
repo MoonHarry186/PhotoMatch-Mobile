@@ -8,6 +8,7 @@ import {
   type TextInputProps,
 } from 'react-native';
 
+import { InlineError } from '@/components/feedback/InlineError';
 import { colors, controlHeight, radius, spacing, typography } from '@/theme';
 
 type Props = TextInputProps & {
@@ -45,11 +46,7 @@ export const TextField = forwardRef<TextInput, Props>(function TextField(
           </Pressable>
         ) : null}
       </View>
-      {error ? (
-        <Text accessibilityRole="alert" style={styles.error}>
-          {error}
-        </Text>
-      ) : null}
+      <InlineError message={error} />
     </View>
   );
 });
@@ -85,5 +82,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  error: { color: colors.danger, fontSize: 13 },
 });

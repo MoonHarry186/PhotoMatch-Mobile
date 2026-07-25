@@ -13,10 +13,13 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
 import { AppProvider } from '@/providers/app-provider';
+import { RouteErrorBoundary } from '@/components/boundaries/FeatureErrorBoundary';
 import { initializeObservability } from '@/services/observability';
 
 void SplashScreen.preventAutoHideAsync();
 initializeObservability();
+
+export { RouteErrorBoundary as ErrorBoundary };
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({

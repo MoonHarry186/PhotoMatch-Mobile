@@ -4,7 +4,7 @@ import { StyleSheet, Text } from 'react-native';
 
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button, TextField } from '@/components/ui';
-import { ApiError } from '@/services/api/api-error';
+import { AppError, getUserErrorMessage } from '@/core/errors';
 import { spacing } from '@/theme';
 import { useSession } from '@/providers/session-provider';
 
@@ -33,8 +33,8 @@ export function VerifyEmailScreen() {
       })
       .catch((caught: unknown) =>
         setMessage(
-          caught instanceof ApiError
-            ? caught.message
+          caught instanceof AppError
+            ? getUserErrorMessage(caught)
             : 'Liên kết xác minh đã hết hạn hoặc không hợp lệ.',
         ),
       )

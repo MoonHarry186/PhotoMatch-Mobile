@@ -1,6 +1,7 @@
 import { Redirect } from 'expo-router';
 
 import { BrandedSplash, ErrorState, OfflineState } from '@/components/feedback';
+import { getUserErrorMessage, normalizeError } from '@/core/errors';
 import { useSession } from '@/providers/session-provider';
 
 export default function BootstrapRoute() {
@@ -11,7 +12,11 @@ export default function BootstrapRoute() {
   if (session.status === 'error') {
     return (
       <ErrorState
-        message={session.error?.message}
+        description={
+          session.error
+            ? getUserErrorMessage(normalizeError(session.error))
+            : undefined
+        }
         onAction={() => void session.reload()}
       />
     );

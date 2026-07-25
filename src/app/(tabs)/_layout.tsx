@@ -4,6 +4,8 @@ import { Text as TabIconText, type ColorValue } from 'react-native';
 import { useI18n } from '@/i18n/i18n-provider';
 import { useSession } from '@/providers/session-provider';
 
+export { RouteErrorBoundary as ErrorBoundary } from '@/components/boundaries/FeatureErrorBoundary';
+
 export default function TabsLayout() {
   const { t } = useI18n();
   const session = useSession();

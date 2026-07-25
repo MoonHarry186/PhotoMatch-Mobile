@@ -7,7 +7,7 @@ import { ErrorState, LoadingState } from '@/components/feedback';
 import { Button } from '@/components/ui';
 import type { LegalDocumentResponse } from '@/generated/api/types.gen';
 import { useSession } from '@/providers/session-provider';
-import { ApiError } from '@/services/api/api-error';
+import { AppError } from '@/core/errors';
 import { spacing, typography } from '@/theme';
 
 import { authApi } from '../auth/auth.api';
@@ -89,8 +89,8 @@ export function LegalScreen({
                 .then(session.reload)
                 .catch(async (caught: unknown) => {
                   if (
-                    caught instanceof ApiError &&
-                    caught.code === 'STALE_LEGAL_VERSION'
+                    caught instanceof AppError &&
+                    caught.businessCode === 'STALE_LEGAL_VERSION'
                   ) {
                     await load();
                     setError(

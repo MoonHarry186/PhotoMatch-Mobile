@@ -1,3 +1,6 @@
+import { RootErrorBoundary } from '@/components/boundaries/FeatureErrorBoundary';
+
+import { AppFeedbackProvider } from './app-feedback-provider';
 import { DeepLinkProvider } from './deep-link-provider';
 import { I18nProvider } from '@/i18n/i18n-provider';
 import { NotificationProvider } from './notification-provider';
@@ -12,16 +15,20 @@ export function AppProvider({ children }: React.PropsWithChildren) {
     <ThemeProvider>
       <I18nProvider>
         <QueryProvider>
-          <SessionProvider>
-            <NotificationProvider>
-              <DeepLinkProvider>
-                <WebSocketProvider>
-                  <PendingNavigation />
-                  {children}
-                </WebSocketProvider>
-              </DeepLinkProvider>
-            </NotificationProvider>
-          </SessionProvider>
+          <AppFeedbackProvider>
+            <RootErrorBoundary>
+              <SessionProvider>
+                <NotificationProvider>
+                  <DeepLinkProvider>
+                    <WebSocketProvider>
+                      <PendingNavigation />
+                      {children}
+                    </WebSocketProvider>
+                  </DeepLinkProvider>
+                </NotificationProvider>
+              </SessionProvider>
+            </RootErrorBoundary>
+          </AppFeedbackProvider>
         </QueryProvider>
       </I18nProvider>
     </ThemeProvider>

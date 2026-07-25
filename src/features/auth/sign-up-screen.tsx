@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation } from '@tanstack/react-query';
 import { Link, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -6,7 +7,11 @@ import type { z } from 'zod';
 
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button, TextField } from '@/components/ui';
-import { ApiError } from '@/services/api/api-error';
+import {
+  applyServerFieldErrors,
+  getUserErrorMessage,
+  normalizeError,
+} from '@/core/errors';
 import { spacing } from '@/theme';
 
 import { authApi } from './auth.api';
@@ -31,14 +36,26 @@ export function SignUpScreen() {
       acceptedLegal: false as never,
     },
   });
+  const signUp = useMutation({ mutationFn: authApi.signUp });
   const submit = handleSubmit(async ({ email, password }) => {
     try {
-      await authApi.signUp({ email, password });
+      await signUp.mutateAsync({ email, password });
       router.replace({ pathname: '/(auth)/verify-email', params: { email } });
     } catch (caught) {
-      const error = caught instanceof ApiError ? caught : null;
+      const error = normalizeError(caught);
+      let shouldFocus = true;
+      applyServerFieldErrors(error.fieldErrors, (field, message) => {
+        if (
+          field === 'email' ||
+          field === 'password' ||
+          field === 'confirmPassword'
+        ) {
+          setError(field, { message }, { shouldFocus });
+          shouldFocus = false;
+        }
+      });
       setError('root', {
-        message: error?.message ?? 'Không thể tạo tài khoản.',
+        message: getUserErrorMessage(error),
       });
     }
   });
@@ -55,6 +72,7 @@ export function SignUpScreen() {
             autoCapitalize="none"
             keyboardType="email-address"
             value={field.value}
+            ref={field.ref}
             onChangeText={field.onChange}
             onBlur={field.onBlur}
             error={errors.email?.message}
@@ -70,6 +88,7 @@ export function SignUpScreen() {
             secureTextEntry
             secureToggle
             value={field.value}
+            ref={field.ref}
             onChangeText={field.onChange}
             onBlur={field.onBlur}
             error={errors.password?.message}
@@ -85,6 +104,7 @@ export function SignUpScreen() {
             secureTextEntry
             secureToggle
             value={field.value}
+            ref={field.ref}
             onChangeText={field.onChange}
             onBlur={field.onBlur}
             error={errors.confirmPassword?.message}
@@ -121,7 +141,7 @@ export function SignUpScreen() {
       ) : null}
       <Button
         label="Tạo tài khoản"
-        loading={isSubmitting}
+        loading={isSubmitting || signUp.isPending}
         onPress={() => void submit()}
       />
       <View style={styles.center}>

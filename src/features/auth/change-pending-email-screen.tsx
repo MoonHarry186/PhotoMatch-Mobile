@@ -6,7 +6,11 @@ import type { z } from 'zod';
 
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button, TextField } from '@/components/ui';
-import { ApiError, fieldErrors } from '@/services/api/api-error';
+import {
+  applyServerFieldErrors,
+  getUserErrorMessage,
+  normalizeError,
+} from '@/core/errors';
 
 import { authApi } from './auth.api';
 import { AuthHeader } from './auth-header';
@@ -38,19 +42,19 @@ export function ChangePendingEmailScreen() {
         params: { email: value.newEmail },
       });
     } catch (caught) {
-      const error = caught instanceof ApiError ? caught : null;
-      for (const [name, message] of Object.entries(
-        error ? fieldErrors(error) : {},
-      )) {
+      const error = normalizeError(caught);
+      let shouldFocus = true;
+      applyServerFieldErrors(error.fieldErrors, (name, message) => {
         if (
           name === 'currentEmail' ||
           name === 'newEmail' ||
           name === 'password'
         ) {
-          setError(name, { message });
+          setError(name, { message }, { shouldFocus });
+          shouldFocus = false;
         }
-      }
-      setError('root', { message: error?.message ?? 'Không thể đổi email.' });
+      });
+      setError('root', { message: getUserErrorMessage(error) });
     }
   });
   return (
@@ -77,6 +81,7 @@ export function ChangePendingEmailScreen() {
               secureToggle={name === 'password'}
               autoCapitalize="none"
               value={field.value}
+              ref={field.ref}
               onChangeText={field.onChange}
               onBlur={field.onBlur}
               error={errors[name]?.message}

@@ -1,30 +1,7 @@
 import * as Sentry from '@sentry/react-native';
 
 import { env } from '@/config/env';
-
-const sensitiveKeys = new Set([
-  'authorization',
-  'token',
-  'refreshToken',
-  'latitude',
-  'longitude',
-  'signedUrl',
-  'deviceToken',
-  'message',
-  'description',
-  'comment',
-]);
-
-function scrub(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(scrub);
-  if (!value || typeof value !== 'object') return value;
-  return Object.fromEntries(
-    Object.entries(value).map(([key, item]) => [
-      key,
-      sensitiveKeys.has(key) ? '[Filtered]' : scrub(item),
-    ]),
-  );
-}
+import { sanitizeErrorContext } from '@/core/errors';
 
 export function initializeObservability() {
   if (!env.EXPO_PUBLIC_SENTRY_DSN) return;
@@ -33,7 +10,7 @@ export function initializeObservability() {
     environment: env.EXPO_PUBLIC_APP_ENV,
     sendDefaultPii: false,
     enableAutoSessionTracking: true,
-    beforeSend: (event) => scrub(event) as typeof event,
+    beforeSend: (event) => sanitizeErrorContext(event) as typeof event,
   });
 }
 
