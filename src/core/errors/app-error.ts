@@ -15,6 +15,7 @@ export interface AppErrorOptions {
   status?: number;
   retryable?: boolean;
   fieldErrors?: Record<string, string[]>;
+  details?: unknown;
   requestId?: string;
   cause?: unknown;
   businessCode?: string;
@@ -25,6 +26,7 @@ export class AppError extends Error {
   readonly status?: number;
   readonly retryable: boolean;
   readonly fieldErrors?: Record<string, string[]>;
+  readonly details?: unknown;
   readonly requestId?: string;
   readonly cause?: unknown;
   readonly businessCode?: string;
@@ -37,6 +39,7 @@ export class AppError extends Error {
     if (options.status !== undefined) this.status = options.status;
     if (options.fieldErrors !== undefined)
       this.fieldErrors = options.fieldErrors;
+    if (options.details !== undefined) this.details = options.details;
     if (options.requestId !== undefined) this.requestId = options.requestId;
     if (options.cause !== undefined) this.cause = options.cause;
     if (options.businessCode !== undefined)

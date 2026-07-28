@@ -10,17 +10,13 @@ export type SignUpDto = {
 };
 
 export type VerifyEmailDto = {
-    token: string;
+    challengeId: string;
+    otp: string;
+    deviceId?: string;
 };
 
 export type EmailDto = {
     email: string;
-};
-
-export type ChangePendingEmailDto = {
-    currentEmail: string;
-    newEmail: string;
-    password: string;
 };
 
 export type SignInDto = {
@@ -40,8 +36,13 @@ export type RefreshDto = {
     refreshToken: string;
 };
 
+export type VerifyPasswordResetOtpDto = {
+    challengeId: string;
+    otp: string;
+};
+
 export type ResetPasswordDto = {
-    token: string;
+    resetToken: string;
     newPassword: string;
 };
 
@@ -229,7 +230,7 @@ export type RegisterDeviceDto = {
 };
 
 export type UserStatusActionDto = {
-    action: 'SUSPEND' | 'RESTORE';
+    status: 'ACTIVE' | 'SUSPENDED' | 'BANNED';
     reason: string;
 };
 
@@ -296,6 +297,7 @@ export type CreateServiceDto = {
 };
 
 export type UpdateServiceDto = {
+    activityFieldId?: string;
     name?: string;
     description?: string;
     status?: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
@@ -365,9 +367,30 @@ export type UserSummary = {
 };
 
 export type VerificationPendingResponse = {
-    userId: string;
-    status: string;
-    emailVerificationRequired: boolean;
+    status: 'verification_required';
+    challengeId: string;
+    expiresIn: number;
+    resendAfter: number;
+};
+
+export type VerificationAcceptedResponse = {
+    status: 'accepted';
+    challengeId: string;
+    expiresIn: number;
+    resendAfter: number;
+};
+
+export type PasswordResetChallengeResponse = {
+    status: 'accepted';
+    challengeId: string;
+    expiresIn: number;
+    resendAfter: number;
+};
+
+export type PasswordResetVerifiedResponse = {
+    status: 'verified';
+    resetToken: string;
+    expiresIn: number;
 };
 
 export type AuthSessionResponse = {
@@ -456,6 +479,49 @@ export type ProfileResponse = {
     updatedAt?: string;
 };
 
+export type PublicCatalogItemResponse = {
+    id: string;
+    code: string;
+    name: string;
+};
+
+export type PublicServiceSelectionResponse = {
+    id: string;
+    code: string;
+    name: string;
+    serviceMode: 'OFFERED' | 'WANTED';
+    minPrice?: number | null;
+    maxPrice?: number | null;
+    currency?: string | null;
+    priceUnit?: string | null;
+};
+
+export type PublicPhotographerProfileResponse = {
+    headline?: string | null;
+    yearsExperience?: number | null;
+    availabilityStatus?: 'AVAILABLE' | 'BUSY' | 'UNAVAILABLE';
+};
+
+export type PublicProfileResponse = {
+    userRoleId: string;
+    role: 'CUSTOMER' | 'PHOTOGRAPHER';
+    displayName: string | null;
+    bio: string | null;
+    avatarAssetId: string | null;
+    city: {
+        id: string;
+        name: string;
+    } | null;
+    identityVerificationStatus: string;
+    photographerProfile?: PublicPhotographerProfileResponse;
+    activityFields: Array<PublicCatalogItemResponse>;
+    services: Array<PublicServiceSelectionResponse>;
+    rating?: {
+        average: number;
+        count: number;
+    } | null;
+};
+
 export type PortfolioItemResponse = {
     id: string;
     userRoleId: string;
@@ -466,6 +532,11 @@ export type PortfolioItemResponse = {
     sortOrder: number;
     createdAt?: string;
     updatedAt?: string;
+    service?: {
+        id: string;
+        name: string;
+        code: string;
+    } | null;
 };
 
 export type SettingsResponse = {
@@ -591,6 +662,10 @@ export type ReviewResponse = {
     moderationReason?: string | null;
     moderatedAt?: string | null;
     createdAt: string;
+    customer?: {
+        displayName?: string | null;
+        avatarAssetId?: string | null;
+    } | null;
 };
 
 export type ReviewCollectionResponse = {
@@ -882,7 +957,7 @@ export type AuthControllerVerifyEmailResponses = {
     /**
      * Successful response
      */
-    201: StatusResponse;
+    201: AuthSessionResponse;
 };
 
 export type AuthControllerVerifyEmailResponse = AuthControllerVerifyEmailResponses[keyof AuthControllerVerifyEmailResponses];
@@ -915,43 +990,10 @@ export type AuthControllerResendResponses = {
     /**
      * Successful response
      */
-    201: StatusResponse;
+    201: VerificationAcceptedResponse;
 };
 
 export type AuthControllerResendResponse = AuthControllerResendResponses[keyof AuthControllerResendResponses];
-
-export type AuthControllerChangePendingEmailData = {
-    body: ChangePendingEmailDto;
-    path?: never;
-    query?: never;
-    url: '/api/v1/auth/change-pending-email';
-};
-
-export type AuthControllerChangePendingEmailErrors = {
-    /**
-     * Error response
-     */
-    400: ErrorResponse;
-    /**
-     * Error response
-     */
-    429: ErrorResponse;
-    /**
-     * Error response
-     */
-    500: ErrorResponse;
-};
-
-export type AuthControllerChangePendingEmailError = AuthControllerChangePendingEmailErrors[keyof AuthControllerChangePendingEmailErrors];
-
-export type AuthControllerChangePendingEmailResponses = {
-    /**
-     * Successful response
-     */
-    201: StatusResponse;
-};
-
-export type AuthControllerChangePendingEmailResponse = AuthControllerChangePendingEmailResponses[keyof AuthControllerChangePendingEmailResponses];
 
 export type AuthControllerSignInData = {
     body: SignInDto;
@@ -1080,10 +1122,43 @@ export type AuthControllerForgotPasswordResponses = {
     /**
      * Successful response
      */
-    201: StatusResponse;
+    201: PasswordResetChallengeResponse;
 };
 
 export type AuthControllerForgotPasswordResponse = AuthControllerForgotPasswordResponses[keyof AuthControllerForgotPasswordResponses];
+
+export type AuthControllerVerifyPasswordResetOtpData = {
+    body: VerifyPasswordResetOtpDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/verify-password-reset-otp';
+};
+
+export type AuthControllerVerifyPasswordResetOtpErrors = {
+    /**
+     * Error response
+     */
+    400: ErrorResponse;
+    /**
+     * Error response
+     */
+    429: ErrorResponse;
+    /**
+     * Error response
+     */
+    500: ErrorResponse;
+};
+
+export type AuthControllerVerifyPasswordResetOtpError = AuthControllerVerifyPasswordResetOtpErrors[keyof AuthControllerVerifyPasswordResetOtpErrors];
+
+export type AuthControllerVerifyPasswordResetOtpResponses = {
+    /**
+     * Successful response
+     */
+    201: PasswordResetVerifiedResponse;
+};
+
+export type AuthControllerVerifyPasswordResetOtpResponse = AuthControllerVerifyPasswordResetOtpResponses[keyof AuthControllerVerifyPasswordResetOtpResponses];
 
 export type AuthControllerResetPasswordData = {
     body: ResetPasswordDto;
@@ -1827,7 +1902,7 @@ export type ProfilesControllerPublicProfileResponses = {
     /**
      * Successful response
      */
-    200: ProfileResponse;
+    200: PublicProfileResponse;
 };
 
 export type ProfilesControllerPublicProfileResponse = ProfilesControllerPublicProfileResponses[keyof ProfilesControllerPublicProfileResponses];

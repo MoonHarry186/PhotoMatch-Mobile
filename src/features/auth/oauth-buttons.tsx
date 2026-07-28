@@ -2,6 +2,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { makeRedirectUri, ResponseType } from 'expo-auth-session';
 import * as Google from 'expo-auth-session/providers/google';
 import * as Crypto from 'expo-crypto';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
@@ -13,9 +14,14 @@ import { spacing } from '@/theme';
 
 import { authApi } from './auth.api';
 import { isOAuthCancellation, oauthResponseOutcome } from './oauth-response';
+import {
+  restrictionParamsFromError,
+  restrictionRoute,
+} from './restriction-navigation';
 
 function GoogleOAuthButton() {
   const { acceptSession } = useSession();
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [request, response, promptAsync] = Google.useAuthRequest({
@@ -45,6 +51,14 @@ function GoogleOAuthButton() {
           }),
         );
       } catch (caught) {
+        const restriction =
+          caught instanceof AppError
+            ? restrictionParamsFromError(caught)
+            : null;
+        if (restriction) {
+          router.replace(restrictionRoute(restriction));
+          return;
+        }
         setError(
           caught instanceof AppError
             ? getUserErrorMessage(caught)
@@ -54,7 +68,7 @@ function GoogleOAuthButton() {
         setLoading(false);
       }
     });
-  }, [acceptSession, response]);
+  }, [acceptSession, response, router]);
 
   return (
     <>
@@ -76,6 +90,7 @@ function GoogleOAuthButton() {
 
 export function OAuthButtons() {
   const { acceptSession } = useSession();
+  const router = useRouter();
   const [appleError, setAppleError] = useState<string | null>(null);
   const [appleLoading, setAppleLoading] = useState(false);
   const googleConfigured = Boolean(
@@ -120,6 +135,12 @@ export function OAuthButtons() {
       );
     } catch (caught) {
       if (isOAuthCancellation(caught)) return;
+      const restriction =
+        caught instanceof AppError ? restrictionParamsFromError(caught) : null;
+      if (restriction) {
+        router.replace(restrictionRoute(restriction));
+        return;
+      }
       setAppleError(
         caught instanceof AppError
           ? getUserErrorMessage(caught)

@@ -5,7 +5,7 @@
 | Cold bootstrap        | Required | Required     | Both  | Both       | Large text/reduced motion | Explicit retry          | Cold                 |
 | Sign in/up            | Required | Required     | Both  | Both       | Keyboard/screen reader    | Domain vs network error | Warm                 |
 | Google/Apple OAuth    | Required | Required     | Both  | Both       | Cancel/error labels       | Safe cancellation       | Callback             |
-| Email verification    | Required | Required     | Both  | Both       | Cooldown announced        | Resend retry            | Cold/warm token      |
+| Email verification    | Required | Required     | Both  | Both       | OTP autofill/paste        | Cooldown + resend retry | Manual six-digit OTP |
 | Password reset        | Required | Required     | Both  | Both       | Secure input labels       | Neutral request         | Cold/warm token      |
 | Legal viewer/consent  | Required | Required     | Both  | Both       | Focus/readability         | Stale version reload    | Bootstrap gate       |
 | Restriction takeover  | Required | Required     | Both  | Both       | Non-color status          | Canonical reload        | Pending target held  |

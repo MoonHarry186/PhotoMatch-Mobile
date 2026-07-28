@@ -13,6 +13,7 @@ describe('AppError', () => {
       code: 'CONFLICT',
       message: 'Conflict',
       businessCode: 'BOOKING_TIME_UNAVAILABLE',
+      details: { resourceId: 'booking-1' },
       requestId: 'req-1',
       cause,
     });
@@ -20,6 +21,7 @@ describe('AppError', () => {
       code: 'CONFLICT',
       retryable: false,
       businessCode: 'BOOKING_TIME_UNAVAILABLE',
+      details: { resourceId: 'booking-1' },
       requestId: 'req-1',
       cause,
     });
@@ -83,6 +85,27 @@ describe('AppError', () => {
       'phoneNumber',
       'Số điện thoại không hợp lệ',
     );
+  });
+
+  it('keeps backend details for business-specific error handling', () => {
+    const details = {
+      accountStatus: 'SUSPENDED',
+      restrictions: [{ reason: 'Vi phạm quy định' }],
+    };
+    expect(
+      normalizeError(
+        {
+          code: 'ACCOUNT_RESTRICTED',
+          message: 'Account is not active',
+          details,
+        },
+        new Response('', { status: 403 }),
+      ),
+    ).toMatchObject({
+      code: 'FORBIDDEN',
+      businessCode: 'ACCOUNT_RESTRICTED',
+      details,
+    });
   });
 
   it('uses only safe Vietnamese copy and sanitizes sensitive context', () => {

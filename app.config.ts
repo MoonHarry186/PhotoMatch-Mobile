@@ -121,6 +121,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         },
       ],
       [
+        'expo-location',
+        {
+          locationWhenInUsePermission:
+            'PhotoMatch dùng vị trí khi bạn yêu cầu để tìm người phù hợp ở gần. Vị trí chính xác không hiển thị công khai.',
+        },
+      ],
+      [
         'expo-notifications',
         {
           icon: './assets/images/android-icon-monochrome.png',
@@ -130,12 +137,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         'expo-splash-screen',
         {
-          backgroundColor: '#2563EB',
-          image: './assets/images/splash-icon.png',
+          backgroundColor: '#FFFFFF',
+          image: './assets/images/splash-logo.png',
           imageWidth: 160,
           dark: {
-            backgroundColor: '#020617',
-            image: './assets/images/splash-icon.png',
+            backgroundColor: '#FFFFFF',
+            image: './assets/images/splash-logo.png',
           },
         },
       ],

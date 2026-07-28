@@ -1,12 +1,13 @@
-import { signInSchema, signUpSchema } from '@/features/auth/auth.schemas';
+import {
+  signInSchema,
+  signUpSchema,
+  verificationOtpSchema,
+} from '@/features/auth/auth.schemas';
 import {
   pushPayloadSchema,
   realtimeEventSchema,
 } from '@/schemas/runtime-contracts';
-import {
-  resolveAuthDeepLink,
-  resolveDeepLink,
-} from '@/services/navigation/deep-link';
+import { resolveDeepLink } from '@/services/navigation/deep-link';
 import { localizedApiError, localizedBookingStatus } from '@/i18n/status';
 
 describe('runtime contracts', () => {
@@ -20,9 +21,10 @@ describe('runtime contracts', () => {
         email: 'user@example.com',
         password: 'StrongPassword1',
         confirmPassword: 'StrongPassword1',
-        acceptedLegal: true,
       }).success,
     ).toBe(true);
+    expect(verificationOtpSchema.safeParse('123456').success).toBe(true);
+    expect(verificationOtpSchema.safeParse('12345a').success).toBe(false);
   });
 
   it('fails closed for malformed realtime and push payloads', () => {
@@ -46,16 +48,6 @@ describe('runtime contracts', () => {
       id,
     });
     expect(resolveDeepLink('photomatch://admin/users')).toBeNull();
-    expect(
-      resolveAuthDeepLink(
-        'photomatch://reset-password?token=one-time-reset-token',
-      ),
-    ).toEqual({
-      version: 1,
-      name: 'reset-password',
-      token: 'one-time-reset-token',
-    });
-    expect(resolveAuthDeepLink('photomatch://reset-password')).toBeNull();
   });
 
   it('localizes known statuses and fails neutral for future values', () => {

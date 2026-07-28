@@ -2,6 +2,7 @@ export const colors = {
   brand: '#2563EB',
   brandPressed: '#1D4ED8',
   purple: '#7C3AED',
+  link: '#2563EB',
   light: {
     background: '#F8FAFC',
     surface: '#FFFFFF',

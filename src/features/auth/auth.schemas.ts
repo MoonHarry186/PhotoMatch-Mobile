@@ -20,24 +20,19 @@ export const signUpSchema = z
     email: emailSchema,
     password: passwordSchema,
     confirmPassword: z.string(),
-    acceptedLegal: z.literal(true, {
-      error: 'Bạn cần đồng ý với điều khoản hiện hành',
-    }),
   })
   .refine((value) => value.password === value.confirmPassword, {
     path: ['confirmPassword'],
     message: 'Mật khẩu nhập lại không khớp',
   });
 
-export const changePendingEmailSchema = z.object({
-  currentEmail: emailSchema,
-  newEmail: emailSchema,
-  password: z.string().min(1),
-});
+export const verificationOtpSchema = z
+  .string()
+  .regex(/^\d{6}$/, 'Mã OTP phải gồm đúng 6 chữ số');
 
 export const resetPasswordSchema = z
   .object({
-    token: z.string().min(1),
+    resetToken: z.string().min(1),
     newPassword: passwordSchema,
     confirmPassword: z.string(),
   })

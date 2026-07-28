@@ -15,7 +15,10 @@ import { resetPasswordSchema } from './auth.schemas';
 type Form = z.infer<typeof resetPasswordSchema>;
 
 export function ResetPasswordScreen() {
-  const { token = '' } = useLocalSearchParams<{ token?: string }>();
+  const { email = '', resetToken = '' } = useLocalSearchParams<{
+    email?: string;
+    resetToken?: string;
+  }>();
   const router = useRouter();
   const {
     control,
@@ -24,19 +27,26 @@ export function ResetPasswordScreen() {
     formState: { errors, isSubmitting },
   } = useForm<Form>({
     resolver: zodResolver(resetPasswordSchema),
-    defaultValues: { token, newPassword: '', confirmPassword: '' },
+    defaultValues: { resetToken, newPassword: '', confirmPassword: '' },
   });
-  const submit = handleSubmit(async ({ token: resetToken, newPassword }) => {
+  const submit = handleSubmit(async (value) => {
     try {
-      await authApi.resetPassword({ token: resetToken, newPassword });
-      router.replace('/(auth)/sign-in');
+      await authApi.resetPassword({
+        resetToken: value.resetToken,
+        newPassword: value.newPassword,
+      });
+      router.replace({
+        pathname: '/(auth)/sign-in',
+        params: { email, notice: 'password-reset-success' },
+      });
     } catch (caught) {
       const error = caught instanceof AppError ? caught : null;
       setError('root', {
         message:
           error?.businessCode === 'TOKEN_INVALID' ||
-          error?.businessCode === 'TOKEN_EXPIRED'
-            ? 'Liên kết đặt lại đã hết hạn hoặc đã được sử dụng.'
+          error?.businessCode === 'TOKEN_EXPIRED' ||
+          error?.businessCode === 'RESET_TOKEN_INVALID'
+            ? 'Phiên đặt lại mật khẩu đã hết hạn hoặc đã được sử dụng.'
             : error
               ? getUserErrorMessage(error)
               : 'Không thể đặt lại mật khẩu.',
@@ -71,7 +81,7 @@ export function ResetPasswordScreen() {
       <Button
         label="Đặt lại mật khẩu"
         loading={isSubmitting}
-        disabled={!token}
+        disabled={!resetToken}
         onPress={() => void submit()}
       />
     </AppScreen>

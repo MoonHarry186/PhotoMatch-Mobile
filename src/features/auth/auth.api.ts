@@ -1,5 +1,4 @@
 import {
-  authControllerChangePendingEmail,
   authControllerForgotPassword,
   authControllerOauthSignIn,
   authControllerResend,
@@ -7,13 +6,13 @@ import {
   authControllerSignIn,
   authControllerSignUp,
   authControllerVerifyEmail,
+  authControllerVerifyPasswordResetOtp,
   catalogControllerCurrentLegal,
   profilesControllerConsent,
   profilesControllerConsents,
 } from '@/generated/api/sdk.gen';
 import type {
   AuthSessionResponse,
-  ChangePendingEmailDto,
   ConsentResponse,
   LegalDocumentResponse,
   OAuthSignInDto,
@@ -44,17 +43,28 @@ export const authApi = {
   async signUp(input: SignUpDto) {
     return unwrap(await authControllerSignUp({ body: input }));
   },
-  async verifyEmail(token: string) {
-    return unwrap(await authControllerVerifyEmail({ body: { token } }));
+  async verifyEmail(
+    challengeId: string,
+    otp: string,
+  ): Promise<AuthSessionResponse> {
+    return unwrap(
+      await authControllerVerifyEmail({
+        body: { challengeId, otp, deviceId: await getInstallationId() },
+      }),
+    );
   },
   async resend(email: string) {
     return unwrap(await authControllerResend({ body: { email } }));
   },
-  async changePendingEmail(input: ChangePendingEmailDto) {
-    return unwrap(await authControllerChangePendingEmail({ body: input }));
-  },
   async forgotPassword(email: string) {
     return unwrap(await authControllerForgotPassword({ body: { email } }));
+  },
+  async verifyPasswordResetOtp(challengeId: string, otp: string) {
+    return unwrap(
+      await authControllerVerifyPasswordResetOtp({
+        body: { challengeId, otp },
+      }),
+    );
   },
   async resetPassword(input: ResetPasswordDto) {
     return unwrap(await authControllerResetPassword({ body: input }));

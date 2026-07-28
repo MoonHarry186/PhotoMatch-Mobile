@@ -86,7 +86,7 @@ export function LegalScreen({
               setBusy(true);
               setError(null);
               void Promise.all(visible.map((item) => authApi.consent(item.id)))
-                .then(session.reload)
+                .then(() => session.reload())
                 .catch(async (caught: unknown) => {
                   if (
                     caught instanceof AppError &&

@@ -113,6 +113,7 @@ export function normalizeError(error: unknown, response?: Response): AppError {
       code === 'SERVER_ERROR' ||
       code === 'RATE_LIMITED',
     fieldErrors: payload ? fieldsFromPayload(payload) : undefined,
+    details: payload?.details,
     requestId,
     cause: error,
     businessCode:

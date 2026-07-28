@@ -44,17 +44,4 @@ export const deepLinkDestinationSchema = z.discriminatedUnion('name', [
   z.object({ version, name: z.literal('booking'), id }),
 ]);
 
-export const authDeepLinkSchema = z.discriminatedUnion('name', [
-  z.object({
-    version,
-    name: z.literal('verify-email'),
-    token: z.string().min(1),
-  }),
-  z.object({
-    version,
-    name: z.literal('reset-password'),
-    token: z.string().min(1),
-  }),
-]);
-
 export type DeepLinkDestination = z.infer<typeof deepLinkDestinationSchema>;

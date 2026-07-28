@@ -22,6 +22,18 @@ describe('common components', () => {
     expect(view.getByLabelText('Email')).toBeTruthy();
   });
 
+  it('toggles password visibility with an accessible icon button', async () => {
+    const view = await render(
+      <TextField label="Password" secureTextEntry secureToggle />,
+    );
+    const input = view.getByLabelText('Password');
+
+    expect(input.props.secureTextEntry).toBe(true);
+    await fireEvent.press(view.getByRole('button', { name: 'Hiện mật khẩu' }));
+    expect(input.props.secureTextEntry).toBe(false);
+    expect(view.getByRole('button', { name: 'Ẩn mật khẩu' })).toBeTruthy();
+  });
+
   it('supports a non-gesture select action', async () => {
     const onChange = jest.fn();
     const view = await render(

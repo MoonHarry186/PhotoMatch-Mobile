@@ -21,6 +21,7 @@ import {
   trustControllerRestrictions,
 } from '@/generated/api/sdk.gen';
 import type { AuthSessionResponse } from '@/generated/api/types.gen';
+import { normalizeUserSummary } from '@/features/onboarding/onboarding.api';
 import { accessTokenMemory } from '@/services/api/access-token';
 import { refreshBypassHeader } from '@/services/api/api-client';
 import { registerRefreshAction } from '@/services/api/refresh-coordinator';
@@ -40,7 +41,7 @@ type SessionContextValue = {
   snapshot: BootstrapSnapshot | null;
   error: Error | null;
   acceptSession: (session: AuthSessionResponse) => Promise<void>;
-  reload: () => Promise<void>;
+  reload: (options?: { refreshAccessToken?: boolean }) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -79,15 +80,16 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
         profilesControllerConsents().then(unwrap),
         profilesControllerOnboardingProgress().then(unwrap),
       ]);
+    const normalizedUser = normalizeUserSummary(user);
     const next = {
-      user,
+      user: normalizedUser,
       restrictions,
       currentLegal,
       consents: consents as BootstrapSnapshot['consents'],
       onboarding,
     };
-    accountIdRef.current = user.id;
-    useAccountStore.getState().setRoleId(user.currentRoleId ?? null);
+    accountIdRef.current = normalizedUser.id;
+    useAccountStore.getState().setRoleId(normalizedUser.currentRoleId ?? null);
     setSnapshot(next);
     setError(null);
     setStatus('ready');
@@ -130,23 +132,32 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
     return () => registerRefreshAction(null);
   }, [refresh]);
 
-  const reload = useCallback(async () => {
-    setStatus('booting');
-    try {
-      if (!accessTokenMemory.get()) {
-        if (!refreshTokenRef.current || !(await refresh())) {
-          setSnapshot(null);
-          setStatus('ready');
-          return;
+  const reload = useCallback(
+    async (options?: { refreshAccessToken?: boolean }) => {
+      setStatus('booting');
+      try {
+        if (options?.refreshAccessToken) {
+          if (!(await refresh())) {
+            setSnapshot(null);
+            setStatus('ready');
+            return;
+          }
+        } else if (!accessTokenMemory.get()) {
+          if (!refreshTokenRef.current || !(await refresh())) {
+            setSnapshot(null);
+            setStatus('ready');
+            return;
+          }
         }
+        await loadSnapshot();
+      } catch (caught) {
+        const resolved = normalizeError(caught);
+        setError(resolved);
+        setStatus(resolved.code === 'NETWORK_ERROR' ? 'offline' : 'error');
       }
-      await loadSnapshot();
-    } catch (caught) {
-      const resolved = normalizeError(caught);
-      setError(resolved);
-      setStatus(resolved.code === 'NETWORK_ERROR' ? 'offline' : 'error');
-    }
-  }, [loadSnapshot, refresh]);
+    },
+    [loadSnapshot, refresh],
+  );
 
   const acceptSession = useCallback(
     async (session: AuthSessionResponse) => {

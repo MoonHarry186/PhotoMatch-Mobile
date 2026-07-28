@@ -1,3 +1,4 @@
+import { SymbolView } from 'expo-symbols';
 import { forwardRef, useState } from 'react';
 import {
   Pressable,
@@ -42,7 +43,19 @@ export const TextField = forwardRef<TextInput, Props>(function TextField(
             onPress={() => setHidden((value) => !value)}
             style={styles.toggle}
           >
-            <Text>{hidden ? 'Hiện' : 'Ẩn'}</Text>
+            <SymbolView
+              name={
+                hidden
+                  ? { ios: 'eye', android: 'visibility', web: 'visibility' }
+                  : {
+                      ios: 'eye.slash',
+                      android: 'visibility_off',
+                      web: 'visibility_off',
+                    }
+              }
+              size={22}
+              tintColor={colors.light.text}
+            />
           </Pressable>
         ) : null}
       </View>

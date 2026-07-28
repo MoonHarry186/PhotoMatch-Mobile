@@ -13,10 +13,11 @@ import { colors, radius, spacing, typography } from '@/theme';
 
 import { Button } from '../ui';
 
-type PickedImage = {
+export type PickedImage = {
   uri: string;
   fileName?: string | null;
   mimeType?: string | null;
+  fileSize?: number | null;
 };
 
 export type UploadStatus = 'queued' | 'uploading' | 'uploaded' | 'failed';
@@ -77,11 +78,21 @@ export function UploadThumbnail({
 export function AvatarPicker({
   uri,
   onPick,
+  onPermissionDenied,
 }: {
   uri?: string | null;
   onPick: (asset: PickedImage) => void;
+  onPermissionDenied?: (canAskAgain: boolean) => void;
 }) {
   const pick = async () => {
+    const current = await ImagePicker.getMediaLibraryPermissionsAsync();
+    const permission = current.granted
+      ? current
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      onPermissionDenied?.(permission.canAskAgain);
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,

@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { Link, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import type { z } from 'zod';
 
 import { AppScreen } from '@/components/layout/app-screen';
@@ -12,10 +12,11 @@ import {
   getUserErrorMessage,
   normalizeError,
 } from '@/core/errors';
-import { spacing } from '@/theme';
+import { colors } from '@/theme';
 
 import { authApi } from './auth.api';
 import { AuthHeader } from './auth-header';
+import { LegalConsentNotice } from './legal-consent-notice';
 import { signUpSchema } from './auth.schemas';
 
 type Form = z.infer<typeof signUpSchema>;
@@ -33,14 +34,21 @@ export function SignUpScreen() {
       email: '',
       password: '',
       confirmPassword: '',
-      acceptedLegal: false as never,
     },
   });
   const signUp = useMutation({ mutationFn: authApi.signUp });
   const submit = handleSubmit(async ({ email, password }) => {
     try {
-      await signUp.mutateAsync({ email, password });
-      router.replace({ pathname: '/(auth)/verify-email', params: { email } });
+      const challenge = await signUp.mutateAsync({ email, password });
+      router.replace({
+        pathname: '/(auth)/verify-email',
+        params: {
+          email,
+          challengeId: challenge.challengeId,
+          expiresIn: String(challenge.expiresIn),
+          resendAfter: String(challenge.resendAfter),
+        },
+      });
     } catch (caught) {
       const error = normalizeError(caught);
       let shouldFocus = true;
@@ -111,31 +119,6 @@ export function SignUpScreen() {
           />
         )}
       />
-      <Controller
-        control={control}
-        name="acceptedLegal"
-        render={({ field }) => (
-          <Pressable
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: field.value }}
-            onPress={() => field.onChange(!field.value)}
-            style={styles.consent}
-          >
-            <Text>{field.value ? '☑' : '☐'}</Text>
-            <Text style={styles.consentText}>
-              Tôi đồng ý rõ ràng với{' '}
-              <Link href="/(public)/legal/terms">Điều khoản</Link> và{' '}
-              <Link href="/(public)/legal/privacy">
-                Chính sách quyền riêng tư
-              </Link>{' '}
-              hiện hành.
-            </Text>
-          </Pressable>
-        )}
-      />
-      {errors.acceptedLegal?.message ? (
-        <Text style={styles.error}>{errors.acceptedLegal.message}</Text>
-      ) : null}
       {errors.root?.message ? (
         <Text style={styles.error}>{errors.root.message}</Text>
       ) : null}
@@ -145,20 +128,17 @@ export function SignUpScreen() {
         onPress={() => void submit()}
       />
       <View style={styles.center}>
-        <Link href="/(auth)/sign-in">Đã có tài khoản? Đăng nhập</Link>
+        <Link href="/(auth)/sign-in">
+          Đã có tài khoản? <Text style={styles.linkColor}>Đăng nhập</Text>
+        </Link>
       </View>
+      <LegalConsentNotice action="sign-up" />
     </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  consent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    minHeight: 44,
-  },
-  consentText: { flex: 1, lineHeight: 22 },
   error: { color: '#B91C1C' },
   center: { alignItems: 'center' },
+  linkColor: { color: colors.link },
 });
