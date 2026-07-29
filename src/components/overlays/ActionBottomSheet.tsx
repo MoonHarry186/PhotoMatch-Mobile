@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/providers/theme-provider';
 import { colors, radius, spacing, typography } from '@/theme';
 
-import { Button } from '../ui';
+import { Button } from '../ui/button';
 
 export interface ActionBottomSheetAction {
   label: string;

@@ -31,5 +31,5 @@ media URL or a private message body.
 | Booking      | `/bookings/{bookingId}`               |
 
 Cold/warm links pass the same resolver and wait for session, verification,
-restriction, legal and onboarding gates. The destination always fetches the
+restriction and onboarding gates. The destination always fetches the
 authorized record; invalid, missing or unauthorized IDs go to a safe fallback.

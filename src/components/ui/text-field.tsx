@@ -1,5 +1,5 @@
 import { SymbolView } from 'expo-symbols';
-import { forwardRef, useState } from 'react';
+import { forwardRef, useState, type ReactNode } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -14,18 +14,33 @@ import { colors, controlHeight, radius, spacing, typography } from '@/theme';
 
 type Props = TextInputProps & {
   label: string;
+  labelAccessory?: ReactNode;
   error?: string;
   secureToggle?: boolean;
+  showPasswordLabel?: string;
+  hidePasswordLabel?: string;
 };
 
 export const TextField = forwardRef<TextInput, Props>(function TextField(
-  { label, error, secureToggle, secureTextEntry, ...props },
+  {
+    label,
+    labelAccessory,
+    error,
+    secureToggle,
+    secureTextEntry,
+    showPasswordLabel = 'Hiện mật khẩu',
+    hidePasswordLabel = 'Ẩn mật khẩu',
+    ...props
+  },
   ref,
 ) {
   const [hidden, setHidden] = useState(secureTextEntry);
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      <View style={styles.labelRow}>
+        <Text style={styles.label}>{label}</Text>
+        {labelAccessory}
+      </View>
       <View style={[styles.field, error && styles.errorField]}>
         <TextInput
           ref={ref}
@@ -39,7 +54,7 @@ export const TextField = forwardRef<TextInput, Props>(function TextField(
         {secureToggle ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={hidden ? 'Hiện mật khẩu' : 'Ẩn mật khẩu'}
+            accessibilityLabel={hidden ? showPasswordLabel : hidePasswordLabel}
             onPress={() => setHidden((value) => !value)}
             style={styles.toggle}
           >
@@ -66,7 +81,14 @@ export const TextField = forwardRef<TextInput, Props>(function TextField(
 
 const styles = StyleSheet.create({
   container: { gap: spacing.sm },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
   label: {
+    flexShrink: 1,
     color: colors.light.text,
     fontFamily: typography.semibold,
     fontSize: 14,

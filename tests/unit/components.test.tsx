@@ -16,10 +16,15 @@ describe('common components', () => {
 
   it('associates field errors with accessible input feedback', async () => {
     const view = await render(
-      <TextField label="Email" error="Invalid email" />,
+      <TextField
+        label="Email"
+        labelAccessory={<Text>Help</Text>}
+        error="Invalid email"
+      />,
     );
     expect(view.getByRole('alert')).toHaveTextContent('Invalid email');
     expect(view.getByLabelText('Email')).toBeTruthy();
+    expect(view.getByText('Help')).toBeTruthy();
   });
 
   it('toggles password visibility with an accessible icon button', async () => {

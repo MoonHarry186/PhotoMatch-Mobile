@@ -1,14 +1,14 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { z } from 'zod';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button, TextField } from '@/components/ui';
 import { AppError, getUserErrorMessage } from '@/core/errors';
-import { spacing } from '@/theme';
+import { colors, spacing, typography } from '@/theme';
 import { useSession } from '@/providers/session-provider';
 import { useI18n } from '@/i18n/i18n-provider';
 
@@ -20,22 +20,23 @@ import {
   restrictionParamsFromError,
   restrictionRoute,
 } from './restriction-navigation';
-import { signInSchema } from './auth.schemas';
+import { createSignInSchema } from './auth.schemas';
 
-type Form = z.infer<typeof signInSchema>;
+type Form = z.infer<ReturnType<typeof createSignInSchema>>;
 
 export function SignInScreen() {
   const session = useSession();
   const router = useRouter();
   const params = useLocalSearchParams<{ email?: string; notice?: string }>();
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
+  const schema = useMemo(() => createSignInSchema(t), [t]);
   const {
     control,
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<Form>({
-    resolver: zodResolver(signInSchema),
+    resolver: zodResolver(schema),
     defaultValues: { email: params.email ?? '', password: '' },
   });
 
@@ -78,10 +79,10 @@ export function SignInScreen() {
       setError('root', {
         message:
           error?.businessCode === 'INVALID_CREDENTIALS'
-            ? 'Email hoặc mật khẩu không đúng.'
+            ? t('auth.invalidCredentials')
             : error
-              ? getUserErrorMessage(error)
-              : 'Không thể đăng nhập.',
+              ? getUserErrorMessage(error, locale)
+              : t('auth.signInFailed'),
       });
     }
   });
@@ -89,12 +90,12 @@ export function SignInScreen() {
   return (
     <AppScreen testID="sign-in-screen">
       <AuthHeader
-        title="Chào mừng trở lại"
-        subtitle="Kết nối với nhiếp ảnh gia phù hợp"
+        title={t('auth.welcomeBack')}
+        subtitle={t('auth.signInSubtitle')}
       />
       {params.notice === 'password-reset-success' ? (
         <Text accessibilityRole="alert" style={styles.success}>
-          Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.
+          {t('auth.passwordResetSuccess')}
         </Text>
       ) : null}
       <Controller
@@ -110,6 +111,7 @@ export function SignInScreen() {
             onBlur={field.onBlur}
             onChangeText={field.onChange}
             error={errors.email?.message}
+            placeholder={t('auth.emailPlaceholder')}
           />
         )}
       />
@@ -119,13 +121,29 @@ export function SignInScreen() {
         render={({ field }) => (
           <TextField
             label={t('auth.password')}
+            labelAccessory={
+              <Link href="/(auth)/forgot-password" asChild>
+                <Pressable
+                  hitSlop={8}
+                  testID="forgot-password-link"
+                  style={({ pressed }) => pressed && styles.linkPressed}
+                >
+                  <Text style={styles.forgotPassword}>
+                    {t('auth.forgotPassword')}
+                  </Text>
+                </Pressable>
+              </Link>
+            }
             autoComplete="current-password"
             secureTextEntry
             secureToggle
+            showPasswordLabel={t('auth.showPassword')}
+            hidePasswordLabel={t('auth.hidePassword')}
             value={field.value}
             onBlur={field.onBlur}
             onChangeText={field.onChange}
             error={errors.password?.message}
+            placeholder={t('auth.passwordPlaceholder')}
             onSubmitEditing={() => void submit()}
           />
         )}
@@ -140,9 +158,22 @@ export function SignInScreen() {
         loading={isSubmitting}
         onPress={() => void submit()}
       />
-      <View style={styles.links}>
-        <Link href="/(auth)/forgot-password">{t('auth.forgotPassword')}</Link>
-        <Link href="/(auth)/sign-up">{t('auth.createAccount')}</Link>
+      <View style={styles.createAccountRow}>
+        <Text style={styles.createAccountPrompt}>{t('auth.noAccount')}</Text>
+        <Link href="/(auth)/sign-up" asChild>
+          <Pressable
+            hitSlop={8}
+            testID="create-account-link"
+            style={({ pressed }) => pressed && styles.linkPressed}
+          >
+            <Text style={styles.createAccount}>{t('auth.createAccount')}</Text>
+          </Pressable>
+        </Link>
+      </View>
+      <View accessibilityRole="text" style={styles.divider}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>{t('common.or')}</Text>
+        <View style={styles.dividerLine} />
       </View>
       <OAuthButtons />
       <LegalConsentNotice action="sign-in" />
@@ -153,10 +184,44 @@ export function SignInScreen() {
 const styles = StyleSheet.create({
   error: { color: '#B91C1C', textAlign: 'center' },
   success: { color: '#15803D', textAlign: 'center' },
-  links: {
+  forgotPassword: {
+    color: colors.link,
+    fontFamily: typography.semibold,
+    fontSize: 14,
+  },
+  createAccountRow: {
+    minHeight: 44,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  createAccountPrompt: {
+    color: colors.light.text,
+    fontFamily: typography.regular,
+    fontSize: 14,
+  },
+  createAccount: {
+    color: colors.link,
+    fontFamily: typography.semibold,
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.md,
   },
+  dividerLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.light.border,
+  },
+  dividerText: {
+    color: colors.light.muted,
+    fontFamily: typography.medium,
+    fontSize: 14,
+  },
+  linkPressed: { opacity: 0.68 },
 });

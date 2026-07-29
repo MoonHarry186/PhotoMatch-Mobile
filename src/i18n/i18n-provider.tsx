@@ -13,10 +13,15 @@ import { messages, type Locale, type MessageKey } from './messages';
 
 const STORAGE_KEY = 'photomatch.locale.v1';
 
+export type Translate = (
+  key: MessageKey,
+  values?: Record<string, string | number>,
+) => string;
+
 type I18nContextValue = {
   locale: Locale;
   setLocale: (locale: Locale) => Promise<void>;
-  t: (key: MessageKey, values?: Record<string, string | number>) => string;
+  t: Translate;
   plural: (count: number, one: string, many: string) => string;
 };
 

@@ -24,10 +24,6 @@ const apiErrors: Record<string, Record<Locale, string>> = {
     vi: 'Email này đã được sử dụng.',
     en: 'This email is already in use.',
   },
-  STALE_LEGAL_VERSION: {
-    vi: 'Điều khoản đã được cập nhật. Vui lòng xem lại.',
-    en: 'The legal terms have changed. Please review them again.',
-  },
 };
 
 export function localizedBookingStatus(status: string, locale: Locale): string {

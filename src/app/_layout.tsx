@@ -10,6 +10,7 @@ import {
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as WebBrowser from 'expo-web-browser';
 import { useEffect } from 'react';
 
 import { AppProvider } from '@/providers/app-provider';
@@ -17,6 +18,7 @@ import { RouteErrorBoundary } from '@/components/boundaries/FeatureErrorBoundary
 import { initializeObservability } from '@/services/observability';
 
 void SplashScreen.preventAutoHideAsync();
+WebBrowser.maybeCompleteAuthSession();
 initializeObservability();
 
 export { RouteErrorBoundary as ErrorBoundary };

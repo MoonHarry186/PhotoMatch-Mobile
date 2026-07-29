@@ -1,24 +1,15 @@
 import type {
-  ConsentResponse,
-  LegalDocumentResponse,
   OnboardingProgressResponse,
   PenaltyResponse,
   UserSummary,
 } from '@/generated/api/types.gen';
 
 export type Gate =
-  | 'signed-out'
-  | 'verification'
-  | 'restriction'
-  | 'legal'
-  | 'onboarding'
-  | 'app';
+  'signed-out' | 'verification' | 'restriction' | 'onboarding' | 'app';
 
 export type BootstrapSnapshot = {
   user: UserSummary;
   restrictions: PenaltyResponse[];
-  currentLegal: LegalDocumentResponse[];
-  consents: ConsentResponse[];
   onboarding: OnboardingProgressResponse;
 };
 
@@ -35,11 +26,6 @@ export function resolveGate(snapshot: BootstrapSnapshot | null): Gate {
   ) {
     return 'restriction';
   }
-  const acceptedIds = new Set(
-    snapshot.consents.map((item) => item.legalDocumentId),
-  );
-  if (snapshot.currentLegal.some((item) => !acceptedIds.has(item.id)))
-    return 'legal';
   if (!snapshot.onboarding.complete) return 'onboarding';
   return 'app';
 }

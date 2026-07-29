@@ -11,8 +11,6 @@ const snapshot = {
     createdAt: '2026-01-01T00:00:00.000Z',
   },
   restrictions: [],
-  currentLegal: [],
-  consents: [],
   onboarding: {
     userRoleId: null,
     role: 'CUSTOMER',
@@ -47,21 +45,6 @@ describe('resolveGate', () => {
         ],
       }),
     ).toBe('restriction');
-    expect(
-      resolveGate({
-        ...snapshot,
-        currentLegal: [
-          {
-            id: snapshot.user.id,
-            documentType: 'TERMS_OF_SERVICE',
-            version: '2',
-            contentUrl: 'https://example.com/terms',
-            status: 'ACTIVE',
-            effectiveAt: '2026-01-01T00:00:00.000Z',
-          },
-        ],
-      }),
-    ).toBe('legal');
     expect(
       resolveGate({
         ...snapshot,

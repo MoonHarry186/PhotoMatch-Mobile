@@ -5,12 +5,13 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button } from '@/components/ui';
 import { normalizeError } from '@/core/errors';
+import { useI18n } from '@/i18n/i18n-provider';
 import { useSession } from '@/providers/session-provider';
 import { colors, spacing, typography } from '@/theme';
 
 import { authApi } from './auth.api';
 import { AuthHeader } from './auth-header';
-import { verificationOtpSchema } from './auth.schemas';
+import { createVerificationOtpSchema } from './auth.schemas';
 import { OtpInput } from './otp-input';
 
 type VerificationParams = {
@@ -20,10 +21,20 @@ type VerificationParams = {
   resendAfter?: string;
 };
 
+type Feedback = {
+  text: string;
+  tone: 'error';
+};
+
 export function VerifyEmailScreen() {
   const params = useLocalSearchParams<VerificationParams>();
   const router = useRouter();
   const session = useSession();
+  const { t } = useI18n();
+  const verificationOtpSchema = useMemo(
+    () => createVerificationOtpSchema(t),
+    [t],
+  );
   const email = params.email ?? '';
   const [challengeId, setChallengeId] = useState(params.challengeId ?? '');
   const [otp, setOtp] = useState('');
@@ -33,7 +44,7 @@ export function VerifyEmailScreen() {
   const [resendAfter, setResendAfter] = useState(() =>
     secondsFromParam(params.resendAfter),
   );
-  const [message, setMessage] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -46,29 +57,32 @@ export function VerifyEmailScreen() {
   }, [expiresIn, resendAfter]);
 
   const expiryLabel = useMemo(() => {
-    if (!challengeId) return 'Gửi mã OTP để bắt đầu xác minh.';
-    if (expiresIn <= 0) return 'Mã OTP đã hết hạn. Vui lòng gửi mã mới.';
+    if (!challengeId) return t('auth.otpStartVerification');
+    if (expiresIn <= 0) return t('auth.otpExpired');
     const minutes = Math.floor(expiresIn / 60);
     const seconds = String(expiresIn % 60).padStart(2, '0');
-    return `Mã có hiệu lực trong ${minutes}:${seconds}`;
-  }, [challengeId, expiresIn]);
+    return t('auth.otpValidFor', { time: `${minutes}:${seconds}` });
+  }, [challengeId, expiresIn, t]);
 
   const verify = async () => {
     const parsed = verificationOtpSchema.safeParse(otp);
     if (!challengeId) {
-      setMessage('Vui lòng gửi mã OTP mới.');
+      setFeedback({ text: t('auth.otpRequestNew'), tone: 'error' });
       return;
     }
     if (!parsed.success) {
-      setMessage(parsed.error.issues[0]?.message ?? 'Mã OTP chưa hợp lệ.');
+      setFeedback({
+        text: parsed.error.issues[0]?.message ?? t('auth.otpInvalid'),
+        tone: 'error',
+      });
       return;
     }
     if (expiresIn <= 0) {
-      setMessage('Mã OTP đã hết hạn. Vui lòng gửi mã mới.');
+      setFeedback({ text: t('auth.otpExpired'), tone: 'error' });
       return;
     }
     setBusy(true);
-    setMessage(null);
+    setFeedback(null);
     try {
       const authenticated = await authApi.verifyEmail(challengeId, parsed.data);
       await session.acceptSession(authenticated);
@@ -76,15 +90,18 @@ export function VerifyEmailScreen() {
     } catch (caught) {
       const error = normalizeError(caught);
       if (error.businessCode === 'VERIFICATION_CODE_INVALID') {
-        setMessage('Mã OTP không đúng. Vui lòng kiểm tra lại.');
+        setFeedback({ text: t('auth.otpIncorrect'), tone: 'error' });
       } else if (error.businessCode === 'VERIFICATION_CODE_EXPIRED') {
         setExpiresIn(0);
-        setMessage('Mã OTP đã hết hạn. Vui lòng gửi mã mới.');
+        setFeedback({ text: t('auth.otpExpired'), tone: 'error' });
       } else if (error.businessCode === 'VERIFICATION_ATTEMPTS_EXCEEDED') {
         setResendAfter(0);
-        setMessage('Bạn đã nhập sai quá số lần cho phép. Hãy gửi mã mới.');
+        setFeedback({
+          text: t('auth.otpAttemptsExceeded'),
+          tone: 'error',
+        });
       } else {
-        setMessage('Chưa thể xác minh email. Vui lòng thử lại.');
+        setFeedback({ text: t('auth.verifyEmailFailed'), tone: 'error' });
       }
     } finally {
       setBusy(false);
@@ -93,16 +110,15 @@ export function VerifyEmailScreen() {
 
   const resend = async () => {
     setBusy(true);
-    setMessage(null);
+    setFeedback(null);
     try {
       const challenge = await authApi.resend(email);
       setChallengeId(challenge.challengeId);
       setExpiresIn(challenge.expiresIn);
       setResendAfter(challenge.resendAfter);
       setOtp('');
-      setMessage('Nếu tài khoản đang chờ xác minh, mã OTP đã được gửi.');
     } catch {
-      setMessage('Chưa thể gửi mã mới. Vui lòng thử lại.');
+      setFeedback({ text: t('auth.resendOtpFailed'), tone: 'error' });
     } finally {
       setBusy(false);
     }
@@ -111,36 +127,44 @@ export function VerifyEmailScreen() {
   return (
     <AppScreen testID="verify-email-screen">
       <AuthHeader
-        title="Xác minh email"
-        subtitle={`Nhập mã OTP 6 số đã gửi đến ${email || 'email của bạn'}.`}
+        title={t('auth.verifyEmailTitle')}
+        subtitle={t('auth.otpSubtitle', {
+          email: email || t('auth.yourEmail'),
+        })}
       />
       <View style={styles.otpSection}>
-        <Text style={styles.otpLabel}>Mã xác minh</Text>
+        <Text style={styles.otpLabel}>{t('auth.verificationCode')}</Text>
         <OtpInput
           value={otp}
           onChange={(value) => {
             setOtp(value);
-            setMessage(null);
+            setFeedback(null);
           }}
           disabled={busy}
-          hasError={Boolean(message)}
+          hasError={Boolean(feedback)}
         />
       </View>
       <Text style={styles.hint}>{expiryLabel}</Text>
-      {message ? (
-        <Text accessibilityRole="alert" style={styles.message}>
-          {message}
+      {feedback ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          accessibilityRole="alert"
+          style={styles.message}
+        >
+          {feedback.text}
         </Text>
       ) : null}
       <Button
-        label="Xác minh"
+        label={t('auth.verify')}
         loading={busy}
         disabled={busy || otp.length !== 6 || !challengeId || expiresIn <= 0}
         onPress={() => void verify()}
       />
       <Button
         label={
-          resendAfter > 0 ? `Gửi lại mã sau ${resendAfter}s` : 'Gửi lại mã OTP'
+          resendAfter > 0
+            ? t('auth.resendOtpCountdown', { seconds: resendAfter })
+            : t('auth.resendOtp')
         }
         variant="ghost"
         disabled={busy || resendAfter > 0 || !email}
@@ -164,5 +188,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   hint: { textAlign: 'center', marginTop: spacing.xs },
-  message: { color: '#B91C1C', textAlign: 'center' },
+  message: { color: colors.danger, textAlign: 'center' },
 });

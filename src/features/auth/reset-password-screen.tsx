@@ -3,16 +3,18 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import { Text } from 'react-native';
 import type { z } from 'zod';
+import { useMemo } from 'react';
 
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button, TextField } from '@/components/ui';
 import { AppError, getUserErrorMessage } from '@/core/errors';
+import { useI18n } from '@/i18n/i18n-provider';
 
 import { authApi } from './auth.api';
 import { AuthHeader } from './auth-header';
-import { resetPasswordSchema } from './auth.schemas';
+import { createResetPasswordSchema } from './auth.schemas';
 
-type Form = z.infer<typeof resetPasswordSchema>;
+type Form = z.infer<ReturnType<typeof createResetPasswordSchema>>;
 
 export function ResetPasswordScreen() {
   const { email = '', resetToken = '' } = useLocalSearchParams<{
@@ -20,13 +22,15 @@ export function ResetPasswordScreen() {
     resetToken?: string;
   }>();
   const router = useRouter();
+  const { locale, t } = useI18n();
+  const schema = useMemo(() => createResetPasswordSchema(t), [t]);
   const {
     control,
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<Form>({
-    resolver: zodResolver(resetPasswordSchema),
+    resolver: zodResolver(schema),
     defaultValues: { resetToken, newPassword: '', confirmPassword: '' },
   });
   const submit = handleSubmit(async (value) => {
@@ -46,16 +50,16 @@ export function ResetPasswordScreen() {
           error?.businessCode === 'TOKEN_INVALID' ||
           error?.businessCode === 'TOKEN_EXPIRED' ||
           error?.businessCode === 'RESET_TOKEN_INVALID'
-            ? 'Phiên đặt lại mật khẩu đã hết hạn hoặc đã được sử dụng.'
+            ? t('auth.resetSessionInvalid')
             : error
-              ? getUserErrorMessage(error)
-              : 'Không thể đặt lại mật khẩu.',
+              ? getUserErrorMessage(error, locale)
+              : t('auth.resetPasswordFailed'),
       });
     }
   });
   return (
     <AppScreen>
-      <AuthHeader title="Mật khẩu mới" />
+      <AuthHeader title={t('auth.resetPasswordTitle')} />
       {(['newPassword', 'confirmPassword'] as const).map((name) => (
         <Controller
           key={name}
@@ -64,10 +68,19 @@ export function ResetPasswordScreen() {
           render={({ field }) => (
             <TextField
               label={
-                name === 'newPassword' ? 'Mật khẩu mới' : 'Nhập lại mật khẩu'
+                name === 'newPassword'
+                  ? t('auth.newPassword')
+                  : t('auth.confirmPassword')
+              }
+              placeholder={
+                name === 'newPassword'
+                  ? t('auth.newPasswordPlaceholder')
+                  : t('auth.confirmPasswordPlaceholder')
               }
               secureTextEntry
               secureToggle
+              showPasswordLabel={t('auth.showPassword')}
+              hidePasswordLabel={t('auth.hidePassword')}
               value={field.value}
               onChangeText={field.onChange}
               error={errors[name]?.message}
@@ -79,7 +92,7 @@ export function ResetPasswordScreen() {
         <Text accessibilityRole="alert">{errors.root.message}</Text>
       ) : null}
       <Button
-        label="Đặt lại mật khẩu"
+        label={t('auth.resetPassword')}
         loading={isSubmitting}
         disabled={!resetToken}
         onPress={() => void submit()}

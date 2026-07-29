@@ -1,7 +1,8 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, waitFor } from '@testing-library/react-native';
 
 import { VerifyEmailScreen } from '@/features/auth/verify-email-screen';
 import { authApi } from '@/features/auth/auth.api';
+import { renderWithI18n } from '../helpers/render-with-i18n';
 
 const mockReplace = jest.fn();
 const mockAcceptSession = jest.fn();
@@ -52,7 +53,7 @@ describe('VerifyEmailScreen', () => {
   });
 
   it('accepts a six-digit OTP and authenticates the verified account', async () => {
-    const view = await render(<VerifyEmailScreen />);
+    const view = await renderWithI18n(<VerifyEmailScreen />);
 
     await fireEvent.changeText(view.getByLabelText('Chữ số OTP 1'), '12a3456');
     for (const [index, digit] of [...'123456'].entries()) {
@@ -73,7 +74,7 @@ describe('VerifyEmailScreen', () => {
   });
 
   it('supports entering each digit separately and moving backward on delete', async () => {
-    const view = await render(<VerifyEmailScreen />);
+    const view = await renderWithI18n(<VerifyEmailScreen />);
 
     for (const [index, digit] of [...'123456'].entries()) {
       await fireEvent.changeText(

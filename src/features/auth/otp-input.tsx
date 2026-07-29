@@ -7,6 +7,7 @@ import {
   type TextInputKeyPressEventData,
 } from 'react-native';
 
+import { useI18n } from '@/i18n/i18n-provider';
 import { colors, radius, spacing, typography } from '@/theme';
 
 const OTP_LENGTH = 6;
@@ -24,6 +25,7 @@ export function OtpInput({
   disabled = false,
   hasError = false,
 }: Props) {
+  const { t } = useI18n();
   const refs = useRef<(TextInput | null)[]>([]);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const digits = Array.from(
@@ -84,7 +86,7 @@ export function OtpInput({
 
   return (
     <View
-      accessibilityLabel="Mã OTP 6 số"
+      accessibilityLabel={t('auth.otpAccessibilityLabel')}
       style={styles.container}
       testID="otp-input"
     >
@@ -94,7 +96,9 @@ export function OtpInput({
           ref={(input) => {
             refs.current[index] = input;
           }}
-          accessibilityLabel={`Chữ số OTP ${index + 1}`}
+          accessibilityLabel={t('auth.otpDigitAccessibilityLabel', {
+            position: index + 1,
+          })}
           autoComplete={index === 0 ? 'one-time-code' : 'off'}
           textContentType={index === 0 ? 'oneTimeCode' : 'none'}
           value={digit}

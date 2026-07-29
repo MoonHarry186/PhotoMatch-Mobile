@@ -1,6 +1,7 @@
 import { Link } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useI18n } from '@/i18n/i18n-provider';
 import { colors } from '@/theme';
 
 type Props = {
@@ -8,20 +9,24 @@ type Props = {
 };
 
 export function LegalConsentNotice({ action }: Props) {
-  const actionLabel = action === 'sign-in' ? 'đăng nhập' : 'đăng ký';
+  const { t } = useI18n();
 
   return (
     <View style={styles.container}>
       <Text style={styles.copy}>
-        Bằng việc {actionLabel}, bạn đồng ý với{' '}
+        {t(
+          action === 'sign-in'
+            ? 'auth.legalSignInPrefix'
+            : 'auth.legalSignUpPrefix',
+        )}{' '}
         <Link style={styles.link} href="/(public)/legal/terms">
-          Điều khoản sử dụng
+          {t('auth.termsOfUse')}
         </Link>{' '}
-        và{' '}
+        {t('auth.and')}{' '}
         <Link style={styles.link} href="/(public)/legal/privacy">
-          Chính sách quyền riêng tư
+          {t('auth.privacyPolicy')}
         </Link>{' '}
-        của PhotoMatch.
+        {t('auth.legalSuffix')}
       </Text>
     </View>
   );
@@ -34,5 +39,5 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: 'center',
   },
-  link: { color: colors.link },
+  link: { color: colors.link, fontWeight: 500 },
 });

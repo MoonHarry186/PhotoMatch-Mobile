@@ -6,8 +6,6 @@ import { AppScreen } from '@/components/layout/app-screen';
 import { ErrorState, LoadingState } from '@/components/feedback';
 import { Button } from '@/components/ui';
 import type { LegalDocumentResponse } from '@/generated/api/types.gen';
-import { useSession } from '@/providers/session-provider';
-import { AppError } from '@/core/errors';
 import { spacing, typography } from '@/theme';
 
 import { authApi } from '../auth/auth.api';
@@ -15,14 +13,12 @@ import { authApi } from '../auth/auth.api';
 export function LegalScreen({
   publicType,
 }: {
-  publicType?: 'terms' | 'privacy';
+  publicType: 'terms' | 'privacy';
 }) {
-  const session = useSession();
   const [documents, setDocuments] = useState<LegalDocumentResponse[] | null>(
-    session.snapshot?.currentLegal ?? null,
+    null,
   );
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
   const load = async () => {
     setError(null);
@@ -42,13 +38,9 @@ export function LegalScreen({
 
   const visible = useMemo(() => {
     if (!documents) return [];
-    if (publicType === 'terms')
-      return documents.filter(
-        (item) => item.documentType === 'TERMS_OF_SERVICE',
-      );
-    if (publicType === 'privacy')
-      return documents.filter((item) => item.documentType === 'PRIVACY_POLICY');
-    return documents;
+    const documentType =
+      publicType === 'terms' ? 'TERMS_OF_SERVICE' : 'PRIVACY_POLICY';
+    return documents.filter((item) => item.documentType === documentType);
   }, [documents, publicType]);
 
   if (!documents)
@@ -61,7 +53,9 @@ export function LegalScreen({
   return (
     <AppScreen>
       <Text accessibilityRole="header" style={styles.title}>
-        Điều khoản hiện hành
+        {publicType === 'terms'
+          ? 'Điều khoản sử dụng'
+          : 'Chính sách quyền riêng tư'}
       </Text>
       {visible.map((document) => (
         <View key={document.id} style={styles.document}>
@@ -76,35 +70,6 @@ export function LegalScreen({
           />
         </View>
       ))}
-      {!publicType ? (
-        <>
-          {error ? <Text accessibilityRole="alert">{error}</Text> : null}
-          <Button
-            label="Tôi đồng ý"
-            loading={busy}
-            onPress={() => {
-              setBusy(true);
-              setError(null);
-              void Promise.all(visible.map((item) => authApi.consent(item.id)))
-                .then(() => session.reload())
-                .catch(async (caught: unknown) => {
-                  if (
-                    caught instanceof AppError &&
-                    caught.businessCode === 'STALE_LEGAL_VERSION'
-                  ) {
-                    await load();
-                    setError(
-                      'Điều khoản vừa được cập nhật. Vui lòng xem lại phiên bản mới.',
-                    );
-                  } else {
-                    setError('Không thể ghi nhận đồng ý. Vui lòng thử lại.');
-                  }
-                })
-                .finally(() => setBusy(false));
-            }}
-          />
-        </>
-      ) : null}
     </AppScreen>
   );
 }

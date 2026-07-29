@@ -28,8 +28,6 @@ export default function BootstrapRoute() {
       return <Redirect href="/(auth)/verify-email" />;
     case 'restriction':
       return <Redirect href="/(public)/restriction" />;
-    case 'legal':
-      return <Redirect href="/(public)/legal/consent" />;
     case 'onboarding':
       return <Redirect href="/(onboarding)" />;
     case 'app':

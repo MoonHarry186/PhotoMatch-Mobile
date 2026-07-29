@@ -1,9 +1,10 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, waitFor } from '@testing-library/react-native';
 
 import { authApi } from '@/features/auth/auth.api';
 import { ForgotPasswordScreen } from '@/features/auth/forgot-password-screen';
 import { ResetPasswordScreen } from '@/features/auth/reset-password-screen';
 import { VerifyResetOtpScreen } from '@/features/auth/verify-reset-otp-screen';
+import { renderWithI18n } from '../helpers/render-with-i18n';
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
@@ -40,7 +41,7 @@ describe('password reset OTP flow', () => {
       expiresIn: 600,
       resendAfter: 60,
     });
-    const view = await render(<ForgotPasswordScreen />);
+    const view = await renderWithI18n(<ForgotPasswordScreen />);
 
     await fireEvent.changeText(
       view.getByLabelText('Email'),
@@ -74,7 +75,7 @@ describe('password reset OTP flow', () => {
       resetToken: 'one-time-reset-grant-that-is-long-enough',
       expiresIn: 600,
     });
-    const view = await render(<VerifyResetOtpScreen />);
+    const view = await renderWithI18n(<VerifyResetOtpScreen />);
 
     await fireEvent.changeText(view.getByLabelText('Chữ số OTP 1'), '123456');
     await fireEvent.press(view.getByRole('button', { name: 'Xác nhận OTP' }));
@@ -102,7 +103,7 @@ describe('password reset OTP flow', () => {
     jest.mocked(authApi.resetPassword).mockResolvedValue({
       status: 'password_reset',
     });
-    const view = await render(<ResetPasswordScreen />);
+    const view = await renderWithI18n(<ResetPasswordScreen />);
 
     await fireEvent.changeText(
       view.getByLabelText('Mật khẩu mới'),

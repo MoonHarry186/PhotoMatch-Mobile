@@ -20,7 +20,6 @@ export const queryKeys = {
   assetUrl: (value: Scope, assetId: string) =>
     [...scope(value), 'asset', assetId] as const,
   restrictions: (value: Scope) => [...scope(value), 'restrictions'] as const,
-  consents: (value: Scope) => [...scope(value), 'consents'] as const,
   onboarding: (value: Scope) => [...scope(value), 'onboarding'] as const,
   discovery: (value: Scope, filters: object, cursor?: string) =>
     [...scope(value), 'discovery', filters, cursor ?? 'first'] as const,

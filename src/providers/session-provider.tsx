@@ -14,9 +14,7 @@ import { normalizeError } from '@/core/errors';
 import {
   authControllerRefresh,
   authControllerSignOut,
-  catalogControllerCurrentLegal,
   meControllerMe,
-  profilesControllerConsents,
   profilesControllerOnboardingProgress,
   trustControllerRestrictions,
 } from '@/generated/api/sdk.gen';
@@ -72,20 +70,15 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
   }, [queryClient]);
 
   const loadSnapshot = useCallback(async () => {
-    const [user, restrictions, currentLegal, consents, onboarding] =
-      await Promise.all([
-        meControllerMe().then(unwrap),
-        trustControllerRestrictions().then(unwrap),
-        catalogControllerCurrentLegal().then(unwrap),
-        profilesControllerConsents().then(unwrap),
-        profilesControllerOnboardingProgress().then(unwrap),
-      ]);
+    const [user, restrictions, onboarding] = await Promise.all([
+      meControllerMe().then(unwrap),
+      trustControllerRestrictions().then(unwrap),
+      profilesControllerOnboardingProgress().then(unwrap),
+    ]);
     const normalizedUser = normalizeUserSummary(user);
     const next = {
       user: normalizedUser,
       restrictions,
-      currentLegal,
-      consents: consents as BootstrapSnapshot['consents'],
       onboarding,
     };
     accountIdRef.current = normalizedUser.id;

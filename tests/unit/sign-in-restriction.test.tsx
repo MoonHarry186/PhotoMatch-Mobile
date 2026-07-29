@@ -43,10 +43,14 @@ jest.mock('@/i18n/i18n-provider', () => ({
       (
         ({
           'auth.email': 'Email',
+          'auth.emailPlaceholder': 'Nhập địa chỉ email',
           'auth.password': 'Mật khẩu',
+          'auth.passwordPlaceholder': 'Nhập mật khẩu',
           'auth.signIn': 'Đăng nhập',
           'auth.forgotPassword': 'Quên mật khẩu?',
-          'auth.createAccount': 'Tạo tài khoản mới',
+          'auth.noAccount': 'Chưa có tài khoản?',
+          'auth.createAccount': 'Đăng ký',
+          'common.or': 'Hoặc',
         }) as Record<string, string>
       )[key] ?? key,
   }),

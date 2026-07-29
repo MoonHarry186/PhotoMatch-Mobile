@@ -1,4 +1,4 @@
-import { AppDialog } from '@/components/overlays';
+import { AppDialog } from '../overlays/AppDialog';
 
 type Props = {
   visible: boolean;

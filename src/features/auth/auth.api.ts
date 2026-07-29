@@ -8,12 +8,9 @@ import {
   authControllerVerifyEmail,
   authControllerVerifyPasswordResetOtp,
   catalogControllerCurrentLegal,
-  profilesControllerConsent,
-  profilesControllerConsents,
 } from '@/generated/api/sdk.gen';
 import type {
   AuthSessionResponse,
-  ConsentResponse,
   LegalDocumentResponse,
   OAuthSignInDto,
   ResetPasswordDto,
@@ -71,13 +68,5 @@ export const authApi = {
   },
   async currentLegal(): Promise<LegalDocumentResponse[]> {
     return unwrap(await catalogControllerCurrentLegal());
-  },
-  async consents(): Promise<ConsentResponse[]> {
-    return unwrap(await profilesControllerConsents()) as ConsentResponse[];
-  },
-  async consent(legalDocumentId: string): Promise<ConsentResponse> {
-    return unwrap(
-      await profilesControllerConsent({ body: { legalDocumentId } }),
-    );
   },
 };

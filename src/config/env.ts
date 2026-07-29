@@ -11,7 +11,6 @@ const publicEnvironmentSchema = z.object({
   EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY: z.string().optional(),
   EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY: z.string().optional(),
   EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: z.string().optional(),
-  EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: z.string().optional(),
   EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: z.string().optional(),
   EXPO_PUBLIC_SENTRY_DSN: z.url().optional(),
   EXPO_PUBLIC_ANALYTICS_PROVIDER: z.literal('disabled').default('disabled'),
@@ -30,8 +29,6 @@ const source = {
     process.env.EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY,
   EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID:
     process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-  EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID:
-    process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
   EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID:
     process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
   EXPO_PUBLIC_SENTRY_DSN: process.env.EXPO_PUBLIC_SENTRY_DSN || undefined,

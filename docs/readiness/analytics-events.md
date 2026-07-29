@@ -6,7 +6,6 @@ If product later approves a provider, only these coarse events may be emitted:
 - `auth_sign_in_outcome`
 - `auth_sign_up_outcome`
 - `email_verification_outcome`
-- `legal_consent_outcome`
 - `bootstrap_outcome`
 - `screen_view`
 

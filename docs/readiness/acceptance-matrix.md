@@ -7,7 +7,7 @@
 | Google/Apple OAuth    | Required | Required     | Both  | Both       | Cancel/error labels       | Safe cancellation       | Callback             |
 | Email verification    | Required | Required     | Both  | Both       | OTP autofill/paste        | Cooldown + resend retry | Manual six-digit OTP |
 | Password reset        | Required | Required     | Both  | Both       | Secure input labels       | Neutral request         | Cold/warm token      |
-| Legal viewer/consent  | Required | Required     | Both  | Both       | Focus/readability         | Stale version reload    | Bootstrap gate       |
+| Legal viewer          | Required | Required     | Both  | Both       | Focus/readability         | Document reload         | Public links         |
 | Restriction takeover  | Required | Required     | Both  | Both       | Non-color status          | Canonical reload        | Pending target held  |
 | Main navigation shell | Required | Required     | Both  | Both       | 44x44/focus               | Offline state           | Resolved after gates |
 

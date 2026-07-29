@@ -1,17 +1,20 @@
 import { Link, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button, TextField } from '@/components/ui';
-import { spacing } from '@/theme';
+import { useI18n } from '@/i18n/i18n-provider';
+import { colors, spacing, typography } from '@/theme';
 
 import { authApi } from './auth.api';
 import { AuthHeader } from './auth-header';
-import { emailSchema } from './auth.schemas';
+import { createEmailSchema } from './auth.schemas';
 
 export function ForgotPasswordScreen() {
   const router = useRouter();
+  const { t } = useI18n();
+  const emailSchema = useMemo(() => createEmailSchema(t), [t]);
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -19,7 +22,9 @@ export function ForgotPasswordScreen() {
   const submit = async () => {
     const parsed = emailSchema.safeParse(email.trim());
     if (!parsed.success) {
-      setMessage(parsed.error.issues[0]?.message ?? 'Email không hợp lệ.');
+      setMessage(
+        parsed.error.issues[0]?.message ?? t('auth.validation.emailInvalid'),
+      );
       return;
     }
     setBusy(true);
@@ -36,7 +41,7 @@ export function ForgotPasswordScreen() {
         },
       });
     } catch {
-      setMessage('Chưa thể gửi mã OTP. Vui lòng thử lại.');
+      setMessage(t('auth.sendOtpFailed'));
     } finally {
       setBusy(false);
     }
@@ -45,11 +50,12 @@ export function ForgotPasswordScreen() {
   return (
     <AppScreen testID="forgot-password-screen">
       <AuthHeader
-        title="Quên mật khẩu"
-        subtitle="Nhập email đã đăng ký để nhận mã OTP 6 số."
+        title={t('auth.forgotPasswordTitle')}
+        subtitle={t('auth.forgotPasswordSubtitle')}
       />
       <TextField
-        label="Email"
+        label={t('auth.email')}
+        placeholder={t('auth.emailPlaceholder')}
         value={email}
         onChangeText={(value) => {
           setEmail(value);
@@ -62,18 +68,36 @@ export function ForgotPasswordScreen() {
         onSubmitEditing={() => void submit()}
       />
       <Button
-        label="Gửi mã OTP"
+        label={t('auth.sendOtp')}
         loading={busy}
         disabled={busy || !email.trim()}
         onPress={() => void submit()}
       />
       <View style={styles.center}>
-        <Link href="/(auth)/sign-in">Quay lại đăng nhập</Link>
+        <Link href="/(auth)/sign-in" asChild>
+          <Pressable
+            testID="back-to-sign-in-link"
+            style={({ pressed }) => pressed && styles.linkPressed}
+          >
+            <Text style={styles.linkText}>{t('auth.backToSignIn')}</Text>
+          </Pressable>
+        </Link>
       </View>
     </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { alignItems: 'center', marginTop: spacing.sm },
+  center: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.sm,
+  },
+  linkText: {
+    color: colors.link,
+    fontFamily: typography.semibold,
+    fontSize: 14,
+  },
+  linkPressed: { opacity: 0.68 },
 });

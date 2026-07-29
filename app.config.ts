@@ -48,9 +48,69 @@ function resolveVariant(): AppVariant {
   throw new Error(`Unsupported EXPO_PUBLIC_APP_ENV: ${value}`);
 }
 
+function googleIosUrlScheme(clientId: string): string {
+  const suffix = '.apps.googleusercontent.com';
+  if (!clientId.endsWith(suffix)) {
+    throw new Error(
+      'EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID must be an iOS OAuth client ID',
+    );
+  }
+  return `com.googleusercontent.apps.${clientId.slice(0, -suffix.length)}`;
+}
+
 export default ({ config }: ConfigContext): ExpoConfig => {
   const variant = resolveVariant();
   const target = variants[variant];
+  const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+  const plugins: NonNullable<ExpoConfig['plugins']> = [
+    'expo-router',
+    'expo-secure-store',
+    'expo-localization',
+    'expo-apple-authentication',
+    '@react-native-community/datetimepicker',
+    [
+      'expo-image-picker',
+      {
+        photosPermission:
+          'PhotoMatch truy cập ảnh để bạn cập nhật hồ sơ và chia sẻ nội dung đã chọn.',
+        cameraPermission:
+          'PhotoMatch truy cập camera để bạn chụp ảnh hồ sơ hoặc nội dung muốn chia sẻ.',
+        microphonePermission: false,
+      },
+    ],
+    [
+      'expo-location',
+      {
+        locationWhenInUsePermission:
+          'PhotoMatch dùng vị trí khi bạn yêu cầu để tìm người phù hợp ở gần. Vị trí chính xác không hiển thị công khai.',
+      },
+    ],
+    [
+      'expo-notifications',
+      {
+        icon: './assets/images/android-icon-monochrome.png',
+        color: '#2563EB',
+      },
+    ],
+    [
+      'expo-splash-screen',
+      {
+        backgroundColor: '#FFFFFF',
+        image: './assets/images/splash-logo.png',
+        imageWidth: 160,
+        dark: {
+          backgroundColor: '#FFFFFF',
+          image: './assets/images/splash-logo.png',
+        },
+      },
+    ],
+  ];
+  if (googleIosClientId) {
+    plugins.push([
+      '@react-native-google-signin/google-signin',
+      { iosUrlScheme: googleIosUrlScheme(googleIosClientId) },
+    ]);
+  }
 
   return {
     ...config,
@@ -104,49 +164,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       output: 'static',
       favicon: './assets/images/favicon.png',
     },
-    plugins: [
-      'expo-router',
-      'expo-secure-store',
-      'expo-localization',
-      'expo-apple-authentication',
-      '@react-native-community/datetimepicker',
-      [
-        'expo-image-picker',
-        {
-          photosPermission:
-            'PhotoMatch truy cập ảnh để bạn cập nhật hồ sơ và chia sẻ nội dung đã chọn.',
-          cameraPermission:
-            'PhotoMatch truy cập camera để bạn chụp ảnh hồ sơ hoặc nội dung muốn chia sẻ.',
-          microphonePermission: false,
-        },
-      ],
-      [
-        'expo-location',
-        {
-          locationWhenInUsePermission:
-            'PhotoMatch dùng vị trí khi bạn yêu cầu để tìm người phù hợp ở gần. Vị trí chính xác không hiển thị công khai.',
-        },
-      ],
-      [
-        'expo-notifications',
-        {
-          icon: './assets/images/android-icon-monochrome.png',
-          color: '#2563EB',
-        },
-      ],
-      [
-        'expo-splash-screen',
-        {
-          backgroundColor: '#FFFFFF',
-          image: './assets/images/splash-logo.png',
-          imageWidth: 160,
-          dark: {
-            backgroundColor: '#FFFFFF',
-            image: './assets/images/splash-logo.png',
-          },
-        },
-      ],
-    ],
+    plugins,
     experiments: {
       typedRoutes: true,
       reactCompiler: true,
