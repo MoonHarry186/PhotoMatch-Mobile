@@ -55,6 +55,14 @@ export function SignUpScreen() {
       });
     } catch (caught) {
       const error = normalizeError(caught);
+      if (error.businessCode === 'EMAIL_ALREADY_EXISTS') {
+        setError(
+          'email',
+          { message: t('auth.emailAlreadyExists') },
+          { shouldFocus: true },
+        );
+        return;
+      }
       let shouldFocus = true;
       applyServerFieldErrors(error.fieldErrors, (field, message) => {
         if (

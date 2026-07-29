@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button, TextField } from '@/components/ui';
+import { normalizeError } from '@/core/errors';
 import { useI18n } from '@/i18n/i18n-provider';
 import { colors, spacing, typography } from '@/theme';
 
@@ -40,8 +41,13 @@ export function ForgotPasswordScreen() {
           resendAfter: String(challenge.resendAfter),
         },
       });
-    } catch {
-      setMessage(t('auth.sendOtpFailed'));
+    } catch (caught) {
+      const error = normalizeError(caught);
+      setMessage(
+        error.businessCode === 'EMAIL_NOT_FOUND'
+          ? t('auth.emailNotFound')
+          : t('auth.sendOtpFailed'),
+      );
     } finally {
       setBusy(false);
     }

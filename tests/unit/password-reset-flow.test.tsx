@@ -4,6 +4,7 @@ import { authApi } from '@/features/auth/auth.api';
 import { ForgotPasswordScreen } from '@/features/auth/forgot-password-screen';
 import { ResetPasswordScreen } from '@/features/auth/reset-password-screen';
 import { VerifyResetOtpScreen } from '@/features/auth/verify-reset-otp-screen';
+import { AppError } from '@/core/errors';
 import { renderWithI18n } from '../helpers/render-with-i18n';
 
 const mockPush = jest.fn();
@@ -61,6 +62,28 @@ describe('password reset OTP flow', () => {
         resendAfter: '60',
       },
     });
+  });
+
+  it('reports an unknown recovery email without leaving the screen', async () => {
+    jest.mocked(authApi.forgotPassword).mockRejectedValue(
+      new AppError({
+        code: 'NOT_FOUND',
+        message: 'No password account exists with this email',
+        businessCode: 'EMAIL_NOT_FOUND',
+      }),
+    );
+    const view = await renderWithI18n(<ForgotPasswordScreen />);
+
+    await fireEvent.changeText(
+      view.getByLabelText('Email'),
+      'missing@example.com',
+    );
+    await fireEvent.press(view.getByRole('button', { name: 'Gửi mã OTP' }));
+
+    expect(
+      await view.findByText('Không tìm thấy tài khoản sử dụng email này.'),
+    ).toBeTruthy();
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   it('verifies the six-digit OTP before opening the new-password form', async () => {

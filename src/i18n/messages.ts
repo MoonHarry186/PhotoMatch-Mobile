@@ -14,6 +14,9 @@ export const messages = {
       'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.',
     'auth.email': 'Email',
     'auth.emailPlaceholder': 'Nhập địa chỉ email',
+    'auth.emailAlreadyExists':
+      'Email này đã tồn tại.',
+    'auth.emailNotFound': 'Không tìm thấy tài khoản sử dụng email này.',
     'auth.password': 'Mật khẩu',
     'auth.passwordPlaceholder': 'Nhập mật khẩu',
     'auth.showPassword': 'Hiện mật khẩu',
@@ -123,6 +126,9 @@ export const messages = {
       'Your password has been reset. You can now sign in with your new password.',
     'auth.email': 'Email',
     'auth.emailPlaceholder': 'Enter your email address',
+    'auth.emailAlreadyExists':
+      'This email is already registered. Sign in or use Forgot password.',
+    'auth.emailNotFound': 'No account was found with this email.',
     'auth.password': 'Password',
     'auth.passwordPlaceholder': 'Enter your password',
     'auth.showPassword': 'Show password',
