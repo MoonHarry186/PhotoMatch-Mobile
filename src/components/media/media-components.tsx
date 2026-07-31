@@ -1,6 +1,7 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { SymbolView } from 'expo-symbols';
 import {
   ActivityIndicator,
   Pressable,
@@ -79,10 +80,14 @@ export function AvatarPicker({
   uri,
   onPick,
   onPermissionDenied,
+  uploading = false,
+  progress = 0,
 }: {
   uri?: string | null;
   onPick: (asset: PickedImage) => void;
   onPermissionDenied?: (canAskAgain: boolean) => void;
+  uploading?: boolean;
+  progress?: number;
 }) {
   const pick = async () => {
     const current = await ImagePicker.getMediaLibraryPermissionsAsync();
@@ -105,16 +110,54 @@ export function AvatarPicker({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Chọn ảnh đại diện"
+      accessibilityLabel={uri ? 'Thay ảnh đại diện' : 'Chọn ảnh đại diện'}
+      disabled={uploading}
       onPress={pick}
+      style={styles.avatarPicker}
     >
-      {uri ? (
-        <Image source={{ uri }} style={styles.avatar} contentFit="cover" />
-      ) : (
-        <View style={[styles.avatar, styles.placeholder]}>
-          <Text style={styles.placeholderText}>Ảnh</Text>
-        </View>
-      )}
+      <View style={styles.avatarFrame}>
+        {uri ? (
+          <Image source={{ uri }} style={styles.avatar} contentFit="cover" />
+        ) : (
+          <View style={[styles.avatar, styles.placeholder]}>
+            <SymbolView
+              name={{
+                ios: 'person.crop.circle.badge.plus',
+                android: 'add_a_photo',
+                web: 'add_a_photo',
+              }}
+              size={42}
+              tintColor={colors.brand}
+            />
+          </View>
+        )}
+        {uploading ? (
+          <View style={styles.avatarUploadOverlay}>
+            <ActivityIndicator color="#FFFFFF" />
+            <Text style={styles.avatarUploadText}>
+              {Math.round(progress * 100)}%
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.editBadge}>
+            <SymbolView
+              name={{
+                ios: uri ? 'pencil' : 'plus',
+                android: uri ? 'edit' : 'add',
+                web: uri ? 'edit' : 'add',
+              }}
+              size={18}
+              tintColor="#FFFFFF"
+            />
+          </View>
+        )}
+      </View>
+      <Text style={styles.avatarAction}>
+        {uri ? 'Thay ảnh đại diện' : 'Chọn ảnh đại diện'}
+      </Text>
+      <Text style={styles.avatarHint}>
+        Ảnh vuông, rõ khuôn mặt · Tối đa 10 MB
+      </Text>
     </Pressable>
   );
 }
@@ -222,13 +265,63 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(2,6,23,0.64)',
   },
   removeText: { color: '#FFFFFF', fontSize: 24 },
-  avatar: { width: 104, height: 104, borderRadius: 52 },
+  avatarPicker: {
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  avatarFrame: {
+    position: 'relative',
+    width: 152,
+    height: 152,
+  },
+  avatar: { width: 152, height: 152, borderRadius: 76 },
   placeholder: {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#DBEAFE',
     borderWidth: 1,
     borderColor: colors.brand,
+  },
+  editBadge: {
+    position: 'absolute',
+    right: 2,
+    bottom: 8,
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    borderRadius: radius.full,
+    backgroundColor: colors.brand,
+  },
+  avatarUploadOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(15, 23, 42, 0.66)',
+  },
+  avatarUploadText: {
+    color: '#FFFFFF',
+    fontFamily: typography.semibold,
+  },
+  avatarAction: {
+    color: colors.brand,
+    fontFamily: typography.semibold,
+    fontSize: 16,
+  },
+  avatarHint: {
+    color: colors.light.muted,
+    fontFamily: typography.regular,
+    fontSize: 13,
+    textAlign: 'center',
   },
   placeholderText: { color: colors.brand, fontFamily: typography.semibold },
   mediaPlaceholder: {

@@ -27,5 +27,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.lg,
   },
-  logo: { width: 128, height: 128 },
+  logo: { width: 220, height: 220 },
 });

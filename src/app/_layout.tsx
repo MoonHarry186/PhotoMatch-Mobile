@@ -1,4 +1,4 @@
-import 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import '../global.css';
 
 import {
@@ -12,6 +12,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect } from 'react';
+import { StyleSheet } from 'react-native';
 
 import { AppProvider } from '@/providers/app-provider';
 import { RouteErrorBoundary } from '@/components/boundaries/FeatureErrorBoundary';
@@ -38,8 +39,16 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <AppProvider>
-      <Stack screenOptions={{ headerShown: false }} />
-    </AppProvider>
+    <GestureHandlerRootView style={styles.root}>
+      <AppProvider>
+        <Stack screenOptions={{ headerShown: false }} />
+      </AppProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+});

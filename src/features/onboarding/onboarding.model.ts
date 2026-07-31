@@ -5,37 +5,30 @@ import type {
 
 import type { RoleCode } from './onboarding.types';
 
-export type OnboardingStep =
-  | 'role'
-  | 'personal'
-  | 'avatar'
-  | 'location'
-  | 'fields'
-  | 'services'
-  | 'portfolio'
-  | 'summary';
+export type OnboardingStep = 'personal' | 'avatar' | 'provider';
+export const onboardingSteps: readonly OnboardingStep[] = [
+  'personal',
+  'avatar',
+  'provider',
+];
 
 const orderedRules: {
   step: OnboardingStep;
   missing: readonly string[];
 }[] = [
-  { step: 'role', missing: ['role'] },
   { step: 'personal', missing: ['displayName', 'dateOfBirth', 'city'] },
   { step: 'avatar', missing: ['avatar'] },
-  { step: 'location', missing: ['location'] },
-  { step: 'fields', missing: ['activityFields'] },
-  { step: 'services', missing: ['services'] },
-  { step: 'portfolio', missing: ['portfolioImages'] },
+  { step: 'provider', missing: ['providerChoice', 'role'] },
 ];
 
 export function firstIncompleteStep(
   progress: Pick<OnboardingProgressResponse, 'complete' | 'missing'>,
 ): OnboardingStep {
-  if (progress.complete) return 'summary';
+  if (progress.complete) return 'provider';
   const missing = new Set(progress.missing);
   return (
     orderedRules.find((rule) => rule.missing.some((item) => missing.has(item)))
-      ?.step ?? 'summary'
+      ?.step ?? 'provider'
   );
 }
 
@@ -49,12 +42,25 @@ export function nextIncompleteStep(
     orderedRules
       .slice(currentIndex + 1)
       .find((rule) => rule.missing.some((item) => missing.has(item)))?.step ??
-    'summary'
+    'provider'
   );
+}
+
+export function previousOnboardingStep(
+  current: OnboardingStep,
+): OnboardingStep | null {
+  return onboardingSteps[onboardingSteps.indexOf(current) - 1] ?? null;
+}
+
+export function nextOnboardingStep(
+  current: OnboardingStep,
+): OnboardingStep | null {
+  return onboardingSteps[onboardingSteps.indexOf(current) + 1] ?? null;
 }
 
 export const missingLabels: Record<string, string> = {
   role: 'Vai trò hiện tại',
+  providerChoice: 'Lựa chọn cung cấp dịch vụ',
   displayName: 'Tên hiển thị',
   dateOfBirth: 'Ngày sinh',
   city: 'Thành phố',

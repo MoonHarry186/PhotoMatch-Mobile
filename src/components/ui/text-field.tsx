@@ -30,6 +30,8 @@ export const TextField = forwardRef<TextInput, Props>(function TextField(
     secureTextEntry,
     showPasswordLabel = 'Hiện mật khẩu',
     hidePasswordLabel = 'Ẩn mật khẩu',
+    multiline,
+    style,
     ...props
   },
   ref,
@@ -41,14 +43,21 @@ export const TextField = forwardRef<TextInput, Props>(function TextField(
         <Text style={styles.label}>{label}</Text>
         {labelAccessory}
       </View>
-      <View style={[styles.field, error && styles.errorField]}>
+      <View
+        style={[
+          styles.field,
+          multiline && styles.multilineField,
+          error && styles.errorField,
+        ]}
+      >
         <TextInput
           ref={ref}
-          style={styles.input}
+          style={[styles.input, multiline && styles.multilineInput, style]}
           placeholderTextColor={colors.light.muted}
           accessibilityLabel={label}
           accessibilityHint={error}
           secureTextEntry={hidden}
+          multiline={multiline}
           {...props}
         />
         {secureToggle ? (
@@ -103,6 +112,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   errorField: { borderColor: colors.danger },
+  multilineField: {
+    minHeight: 132,
+    alignItems: 'stretch',
+  },
   input: {
     flex: 1,
     minHeight: controlHeight,
@@ -110,6 +123,12 @@ const styles = StyleSheet.create({
     color: colors.light.text,
     fontFamily: typography.regular,
     fontSize: 16,
+  },
+  multilineInput: {
+    minHeight: 132,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+    textAlignVertical: 'top',
   },
   toggle: {
     minWidth: 52,

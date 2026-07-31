@@ -42,10 +42,24 @@ export const colors = {
   success: '#15803D',
   warning: '#B45309',
   danger: '#B91C1C',
+  discovery: {
+    reject: '#F15B6C',
+    interest: '#20C997',
+    info: '#38A3F1',
+    actionSurface: '#FFFFFF',
+    scrim: 'rgba(2, 6, 23, 0.92)',
+    scrimSoft: 'rgba(2, 6, 23, 0.48)',
+    chipSurface: 'rgba(255, 255, 255, 0.18)',
+  },
 } as const;
 
 export const gradients = {
   brand: [colors.brand, colors.purple] as const,
+  discoveryOverlay: [
+    'rgba(2, 6, 23, 0)',
+    'rgba(2, 6, 23, 0.56)',
+    colors.discovery.scrim,
+  ] as const,
 };
 
 export const spacing = {

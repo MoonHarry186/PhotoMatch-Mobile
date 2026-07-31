@@ -8,34 +8,27 @@ import { AppScreen } from '@/components/layout/app-screen';
 import { Button } from '@/components/ui';
 import { useSession } from '@/providers/session-provider';
 import { queryKeys } from '@/services/api/query-keys';
-import { colors, radius, spacing, typography } from '@/theme';
+import { useNavigationStore } from '@/stores/navigation.store';
+import { colors, elevation, radius, spacing, typography } from '@/theme';
 
 import { onboardingApi } from './onboarding.api';
 import {
   firstIncompleteStep,
-  nextIncompleteStep,
+  nextOnboardingStep,
+  onboardingSteps,
+  previousOnboardingStep,
   type OnboardingStep,
 } from './onboarding.model';
 import {
-  ActivityFieldsSection,
   AvatarSection,
-  LocationSection,
-  OnboardingSummary,
   PersonalProfileSection,
-  PortfolioRequirement,
-  RoleSection,
-  ServicesSection,
+  ProviderChoiceSection,
 } from './onboarding-sections';
 
 const stepLabels: Record<OnboardingStep, string> = {
-  role: 'Vai trò',
   personal: 'Cá nhân',
   avatar: 'Ảnh',
-  location: 'Vị trí',
-  fields: 'Lĩnh vực',
-  services: 'Dịch vụ',
-  portfolio: 'Portfolio',
-  summary: 'Tổng kết',
+  provider: 'Cung cấp dịch vụ',
 };
 
 export function OnboardingScreen() {
@@ -59,24 +52,19 @@ export function OnboardingScreen() {
     queryFn: onboardingApi.self,
     enabled: Boolean(user),
   });
-  const roleId = progress.data?.userRoleId ?? user?.currentRoleId ?? null;
-  const portfolio = useQuery({
-    queryKey: queryKeys.portfolio({ ...scope, roleId }),
-    queryFn: () => onboardingApi.portfolio(roleId ?? ''),
-    enabled: Boolean(roleId && progress.data?.role === 'PHOTOGRAPHER'),
-  });
   const [stepOverride, setStepOverride] = useState<OnboardingStep | null>(null);
-  const currentStep = progress.data?.complete
-    ? 'summary'
-    : (stepOverride ??
-      firstIncompleteStep(
-        progress.data ?? {
-          complete: false,
-          missing: ['role'],
-        },
-      ));
+  const currentStep =
+    stepOverride ??
+    firstIncompleteStep(
+      progress.data ?? {
+        complete: false,
+        missing: ['displayName'],
+      },
+    );
+  const currentStepIndex = onboardingSteps.indexOf(currentStep);
 
   if (session.gate === 'signed-out') return <Redirect href="/(auth)/sign-in" />;
+  if (session.gate === 'app') return <Redirect href="/(tabs)/discovery" />;
   if (!user || progress.isPending || profile.isPending)
     return <LoadingState label="Đang tải tiến độ onboarding…" />;
   if (progress.isError || profile.isError || !progress.data) {
@@ -92,32 +80,28 @@ export function OnboardingScreen() {
     );
   }
 
-  const resolvedScope = roleId ? { userId: user.id, roleId } : null;
   const refreshAndAdvance = async (from: OnboardingStep) => {
     const [next] = await Promise.all([progress.refetch(), profile.refetch()]);
     if (!next.data) return;
-    setStepOverride(nextIncompleteStep(next.data, from));
+    const nextStep = nextOnboardingStep(from);
+    setStepOverride(nextStep ?? firstIncompleteStep(next.data));
   };
-  const skip = (from: OnboardingStep) =>
-    setStepOverride(nextIncompleteStep(progress.data, from));
-  const complete = async () => {
-    await session.reload();
+  const complete = async (role: 'CUSTOMER' | 'PHOTOGRAPHER') => {
+    await session.reload({ refreshAccessToken: true });
+    if (role === 'PHOTOGRAPHER')
+      useNavigationStore.getState().showProviderSetupBanner();
+    else useNavigationStore.getState().dismissProviderSetupBanner();
     router.replace('/(tabs)/discovery');
+  };
+  const goBack = () => {
+    const previous = previousOnboardingStep(currentStep);
+    if (previous) setStepOverride(previous);
   };
 
   let content;
   switch (currentStep) {
-    case 'role':
-      content = (
-        <RoleSection
-          user={user}
-          onSelected={async () => {
-            await session.reload({ refreshAccessToken: true });
-            const next = await progress.refetch();
-            if (next.data) setStepOverride(firstIncompleteStep(next.data));
-          }}
-        />
-      );
+    case 'provider':
+      content = <ProviderChoiceSection user={user} onSelected={complete} />;
       break;
     case 'personal':
       content = (
@@ -134,65 +118,29 @@ export function OnboardingScreen() {
           profile={profile.data}
           scope={scope}
           onSaved={() => refreshAndAdvance('avatar')}
-          onSkip={() => skip('avatar')}
+          showContinue
         />
       );
-      break;
-    case 'location':
-      content = resolvedScope ? (
-        <LocationSection
-          scope={resolvedScope}
-          onSaved={() => refreshAndAdvance('location')}
-          onSkip={() => skip('location')}
-        />
-      ) : null;
-      break;
-    case 'fields':
-      content = resolvedScope ? (
-        <ActivityFieldsSection
-          scope={resolvedScope}
-          role={progress.data.role}
-          onSaved={() => refreshAndAdvance('fields')}
-        />
-      ) : null;
-      break;
-    case 'services':
-      content = resolvedScope ? (
-        <ServicesSection
-          scope={resolvedScope}
-          role={progress.data.role}
-          onSaved={() => refreshAndAdvance('services')}
-        />
-      ) : null;
-      break;
-    case 'portfolio':
-      content = (
-        <PortfolioRequirement
-          role={progress.data.role}
-          count={portfolio.data?.length ?? 0}
-          onSummary={() => setStepOverride('summary')}
-        />
-      );
-      break;
-    case 'summary':
-      content = resolvedScope ? (
-        <OnboardingSummary
-          progress={progress.data}
-          portfolioCount={portfolio.data?.length ?? 0}
-          scope={resolvedScope}
-          onResume={() => setStepOverride(firstIncompleteStep(progress.data))}
-          onComplete={complete}
-        />
-      ) : null;
       break;
   }
 
   return (
     <AppScreen>
-      <View style={styles.progress}>
-        <Text style={styles.progressLabel}>
-          Bước hiện tại: {stepLabels[currentStep]}
+      <View style={styles.topbar}>
+        {currentStepIndex > 0 ? (
+          <Button label="← Quay lại" variant="ghost" onPress={goBack} />
+        ) : (
+          <View />
+        )}
+        <Text style={styles.stepCount}>
+          {currentStepIndex + 1}/{onboardingSteps.length}
         </Text>
+      </View>
+      <View style={styles.progress}>
+        <View style={styles.progressLabels}>
+          <Text style={styles.progressLabel}>Thiết lập tài khoản</Text>
+          <Text style={styles.progressCurrent}>{stepLabels[currentStep]}</Text>
+        </View>
         <View style={styles.track}>
           <View
             style={[
@@ -200,23 +148,26 @@ export function OnboardingScreen() {
               {
                 width: `${Math.max(
                   10,
-                  ((Object.keys(stepLabels).indexOf(currentStep) + 1) / 8) *
-                    100,
+                  ((currentStepIndex + 1) / onboardingSteps.length) * 100,
                 )}%`,
               },
             ]}
           />
         </View>
       </View>
-      {content ?? (
-        <>
-          <Text style={styles.error}>Chưa xác định được vai trò hiện tại.</Text>
-          <Button
-            label="Tải lại"
-            onPress={() => void session.reload({ refreshAccessToken: true })}
-          />
-        </>
-      )}
+      <View style={styles.contentCard}>
+        {content ?? (
+          <>
+            <Text style={styles.error}>
+              Chưa xác định được vai trò hiện tại.
+            </Text>
+            <Button
+              label="Tải lại"
+              onPress={() => void session.reload({ refreshAccessToken: true })}
+            />
+          </>
+        )}
+      </View>
       <Button
         label="Đăng xuất"
         variant="ghost"
@@ -227,8 +178,36 @@ export function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
+  topbar: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  stepCount: {
+    minWidth: 48,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    overflow: 'hidden',
+    color: colors.brand,
+    fontFamily: typography.bold,
+    textAlign: 'center',
+    borderRadius: radius.full,
+    backgroundColor: colors.light.infoContainer,
+  },
   progress: { gap: spacing.sm },
+  progressLabels: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
   progressLabel: {
+    color: colors.light.text,
+    fontFamily: typography.semibold,
+    fontSize: 14,
+  },
+  progressCurrent: {
     color: colors.light.muted,
     fontFamily: typography.semibold,
     fontSize: 13,
@@ -243,6 +222,15 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: radius.full,
     backgroundColor: colors.brand,
+  },
+  contentCard: {
+    gap: spacing.lg,
+    padding: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.light.border,
+    borderRadius: radius.xl,
+    backgroundColor: colors.light.surface,
+    ...elevation.card,
   },
   error: { color: colors.danger },
 });

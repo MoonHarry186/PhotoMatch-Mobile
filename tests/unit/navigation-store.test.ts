@@ -25,4 +25,19 @@ describe('pending deep-link queue', () => {
       useNavigationStore.getState().consume('development:user-2'),
     ).toBeNull();
   });
+
+  it('shows the provider setup banner once and consumes it on first display', () => {
+    useNavigationStore.getState().showProviderSetupBanner();
+    expect(useNavigationStore.getState().providerSetupBannerVisible).toBe(true);
+
+    expect(useNavigationStore.getState().consumeProviderSetupBanner()).toBe(
+      true,
+    );
+    expect(useNavigationStore.getState().providerSetupBannerVisible).toBe(
+      false,
+    );
+    expect(useNavigationStore.getState().consumeProviderSetupBanner()).toBe(
+      false,
+    );
+  });
 });

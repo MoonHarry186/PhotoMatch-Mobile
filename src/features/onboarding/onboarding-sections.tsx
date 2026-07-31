@@ -14,11 +14,16 @@ import {
 
 import {
   AvatarPicker,
-  UploadThumbnail,
   type PickedImage,
   type UploadStatus,
 } from '@/components/media/media-components';
-import { Button, MultiSelect, Select, TextField } from '@/components/ui';
+import {
+  Button,
+  DateTimeField,
+  MultiSelect,
+  Select,
+  TextField,
+} from '@/components/ui';
 import {
   AppError,
   applyServerFieldErrors,
@@ -80,6 +85,20 @@ function FormError({ message }: { message?: string | null }) {
   return message ? <Text style={styles.error}>{message}</Text> : null;
 }
 
+function parseDateOnly(value?: string | null): Date | null {
+  if (!value) return null;
+  const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
+}
+
+function formatDateOnly(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function PersonalProfileSection({
   profile,
   scope,
@@ -118,6 +137,21 @@ export function PersonalProfileSection({
       bio: profile?.bio ?? '',
     });
   }, [profile, reset]);
+  const birthDateLimits = useMemo(() => {
+    const today = new Date();
+    return {
+      maximum: new Date(
+        today.getFullYear() - 18,
+        today.getMonth(),
+        today.getDate(),
+      ),
+      minimum: new Date(
+        today.getFullYear() - 100,
+        today.getMonth(),
+        today.getDate(),
+      ),
+    };
+  }, []);
 
   const submit = handleSubmit(async (value) => {
     try {
@@ -142,8 +176,8 @@ export function PersonalProfileSection({
   return (
     <>
       <SectionHeader
-        title="Thông tin cá nhân"
-        description="Thông tin cơ bản giúp hồ sơ của bạn rõ ràng và đáng tin cậy hơn."
+        title="Thông tin của bạn"
+        description="Cho mọi người biết họ đang kết nối với ai. Bạn có thể cập nhật lại các thông tin này sau."
       />
       <Controller
         control={control}
@@ -162,13 +196,13 @@ export function PersonalProfileSection({
         control={control}
         name="dateOfBirth"
         render={({ field }) => (
-          <TextField
+          <DateTimeField
             label="Ngày sinh"
-            placeholder="YYYY-MM-DD"
-            keyboardType="numbers-and-punctuation"
-            value={field.value}
-            onChangeText={field.onChange}
-            onBlur={field.onBlur}
+            value={parseDateOnly(field.value)}
+            minimumDate={birthDateLimits.minimum}
+            maximumDate={birthDateLimits.maximum}
+            placeholder="Chọn ngày sinh"
+            onChange={(value) => field.onChange(formatDateOnly(value))}
             error={errors.dateOfBirth?.message}
           />
         )}
@@ -194,9 +228,11 @@ export function PersonalProfileSection({
         name="bio"
         render={({ field }) => (
           <TextField
-            label="Giới thiệu"
+            label="Giới thiệu (không bắt buộc)"
+            placeholder="Chia sẻ đôi chút về bạn, sở thích hoặc phong cách bạn đang tìm kiếm…"
             multiline
-            numberOfLines={4}
+            numberOfLines={5}
+            maxLength={1000}
             value={field.value}
             onChangeText={field.onChange}
             onBlur={field.onBlur}
@@ -219,11 +255,13 @@ export function AvatarSection({
   scope,
   onSaved,
   onSkip,
+  showContinue = false,
 }: {
   profile?: SelfProfile;
   scope: Scope;
   onSaved: () => Promise<void> | void;
   onSkip?: () => void;
+  showContinue?: boolean;
 }) {
   const queryClient = useQueryClient();
   const avatarUrl = useQuery({
@@ -238,6 +276,7 @@ export function AvatarSection({
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [settingsRequired, setSettingsRequired] = useState(false);
+  const [isFinishing, setIsFinishing] = useState(false);
 
   const upload = async (asset: PickedImage) => {
     setError(null);
@@ -248,10 +287,20 @@ export function AvatarSection({
       await queryClient.invalidateQueries({
         queryKey: queryKeys.selfProfile(scope),
       });
-      await onSaved();
     } catch (caught) {
       setStatus('failed');
       setError(actionErrorMessage(caught));
+    }
+  };
+  const finish = async () => {
+    try {
+      setError(null);
+      setIsFinishing(true);
+      await onSaved();
+    } catch (caught) {
+      setError(actionErrorMessage(caught));
+    } finally {
+      setIsFinishing(false);
     }
   };
 
@@ -259,12 +308,15 @@ export function AvatarSection({
     <>
       <SectionHeader
         title="Ảnh đại diện"
-        description="Chọn ảnh vuông, rõ khuôn mặt. Bạn có thể bỏ qua và bổ sung sau."
+        description="Ảnh đại diện là bắt buộc để xây dựng trải nghiệm an toàn và đáng tin cậy."
       />
-      <View style={styles.center}>
+      <View style={styles.avatarCard}>
         <AvatarPicker
           uri={picked?.uri ?? avatarUrl.data}
+          uploading={status === 'uploading'}
+          progress={progress}
           onPick={(asset) => {
+            setSettingsRequired(false);
             setPicked(asset);
             setStatus('queued');
             setProgress(0);
@@ -280,20 +332,32 @@ export function AvatarSection({
           }}
         />
       </View>
-      {picked ? (
-        <UploadThumbnail
-          uri={picked.uri}
-          status={status}
-          progress={progress}
-          onRetry={() => void upload(picked)}
-          onRemove={() => {
-            setPicked(null);
-            setProgress(0);
-            setStatus('queued');
-          }}
-        />
-      ) : null}
       <FormError message={error} />
+      {picked && status === 'failed' ? (
+        <View style={styles.row}>
+          <View style={styles.flex}>
+            <Button
+              label="Thử tải lại"
+              variant="secondary"
+              onPress={() => void upload(picked)}
+            />
+          </View>
+          {profile?.avatarAssetId ? (
+            <View style={styles.flex}>
+              <Button
+                label="Giữ ảnh hiện tại"
+                variant="ghost"
+                onPress={() => {
+                  setPicked(null);
+                  setProgress(0);
+                  setStatus('queued');
+                  setError(null);
+                }}
+              />
+            </View>
+          ) : null}
+        </View>
+      ) : null}
       {settingsRequired ? (
         <Button
           label="Mở Cài đặt"
@@ -304,88 +368,96 @@ export function AvatarSection({
       {onSkip ? (
         <Button label="Bổ sung sau" variant="ghost" onPress={onSkip} />
       ) : null}
+      {picked && status === 'uploaded' ? (
+        <Button
+          label="Xong, tiếp tục"
+          loading={isFinishing}
+          onPress={() => void finish()}
+        />
+      ) : null}
+      {showContinue && profile?.avatarAssetId && !picked ? (
+        <Button
+          label="Tiếp tục"
+          loading={isFinishing}
+          onPress={() => void finish()}
+        />
+      ) : null}
     </>
   );
 }
 
-export function RoleSection({
+export function ProviderChoiceSection({
   user,
   onSelected,
 }: {
   user: UserSummary;
-  onSelected: () => Promise<void> | void;
+  onSelected: (role: RoleCode) => Promise<void> | void;
 }) {
-  const available = useQuery({
-    queryKey: queryKeys.availableRoles({
-      userId: user.id,
-      roleId: user.currentRoleId,
-    }),
-    queryFn: onboardingApi.availableRoles,
-  });
   const mutation = useMutation({
-    mutationFn: async (role: RoleCode) => {
+    mutationFn: async (becomeProvider: boolean) => {
+      const role: RoleCode = becomeProvider ? 'PHOTOGRAPHER' : 'CUSTOMER';
       const existing = findRole(user.roles, role);
-      const selected =
-        existing ??
-        (canChooseAdditionalRole(user.roles, user.onboardingCompletedAt)
-          ? await onboardingApi.addRole(role)
-          : undefined);
-      if (!selected)
-        throw new Error('Vai trò bổ sung đã được chọn và không thể thay thế');
-      if (selected.id !== user.currentRoleId)
-        await onboardingApi.switchRole(selected.id);
+      const selected = becomeProvider
+        ? (existing ??
+          (canChooseAdditionalRole(user.roles, user.onboardingCompletedAt)
+            ? await onboardingApi.addRole(role)
+            : undefined))
+        : existing;
+      if (!selected) {
+        throw new Error(
+          becomeProvider
+            ? 'Không thể thêm vai trò Photographer cho tài khoản này'
+            : 'Không tìm thấy vai trò Customer mặc định',
+        );
+      }
+      await onboardingApi.switchRole(selected.id);
+      return role;
     },
   });
   const [error, setError] = useState<string | null>(null);
 
-  const choose = async (role: RoleCode) => {
+  const choose = async (becomeProvider: boolean) => {
     try {
       setError(null);
-      await mutation.mutateAsync(role);
-      await onSelected();
+      const role = await mutation.mutateAsync(becomeProvider);
+      await onSelected(role);
     } catch (caught) {
       setError(actionErrorMessage(caught));
     }
   };
-  const immutable = !canChooseAdditionalRole(
-    user.roles,
-    user.onboardingCompletedAt,
-  );
 
   return (
     <>
       <SectionHeader
-        title="Bạn dùng PhotoMatch với vai trò nào?"
-        description="Mọi tài khoản luôn có vai trò khách hàng. Bạn có thể chọn thêm Photographer một lần."
+        title="Bạn có muốn cung cấp dịch vụ?"
+        description="Mọi tài khoản đều có thể tìm Photographer. Chọn cung cấp dịch vụ nếu bạn muốn xây dựng hồ sơ Photographer của riêng mình."
       />
-      {(available.data ?? []).map((role) => {
-        const owned = Boolean(findRole(user.roles, role.code));
-        const disabled = immutable && !owned;
-        return (
-          <Pressable
-            key={role.id}
-            accessibilityRole="button"
-            accessibilityState={{ disabled, selected: owned }}
-            disabled={disabled || mutation.isPending}
-            onPress={() => void choose(role.code)}
-            style={[styles.roleCard, owned && styles.roleCardSelected]}
-          >
-            <Text style={styles.cardTitle}>{role.name}</Text>
-            <Text style={styles.description}>
-              {role.code === 'CUSTOMER'
-                ? 'Tìm và đặt lịch photographer phù hợp.'
-                : 'Nhận nhu cầu, giới thiệu dịch vụ và portfolio.'}
-            </Text>
-            {owned ? (
-              <Text style={styles.success}>Đã có trên tài khoản</Text>
-            ) : null}
-          </Pressable>
-        );
-      })}
-      {immutable ? (
-        <Text style={styles.note}>
-          Vai trò bổ sung đã được xác nhận và không thể thay thế.
+      <Pressable
+        accessibilityRole="button"
+        disabled={mutation.isPending}
+        onPress={() => void choose(true)}
+        style={[styles.roleCard, styles.providerCard]}
+      >
+        <Text style={styles.roleEyebrow}>DÀNH CHO PHOTOGRAPHER</Text>
+        <Text style={styles.cardTitle}>Có, tôi muốn cung cấp dịch vụ</Text>
+        <Text style={styles.description}>
+          Bắt đầu với vai trò Photographer và thiết lập dịch vụ sau khi vào ứng
+          dụng.
         </Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        disabled={mutation.isPending}
+        onPress={() => void choose(false)}
+        style={styles.roleCard}
+      >
+        <Text style={styles.cardTitle}>Để sau, tôi đang tìm Photographer</Text>
+        <Text style={styles.description}>
+          Tiếp tục với vai trò Customer mặc định.
+        </Text>
+      </Pressable>
+      {mutation.isPending ? (
+        <Text style={styles.note}>Đang hoàn tất onboarding…</Text>
       ) : null}
       <FormError message={error} />
     </>
@@ -856,6 +928,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   center: { alignItems: 'center' },
+  avatarCard: {
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.light.border,
+    borderRadius: radius.xl,
+    backgroundColor: colors.light.surfaceVariant,
+  },
   row: { flexDirection: 'row', gap: spacing.md },
   flex: { flex: 1 },
   cardTitle: { fontFamily: typography.semibold, color: colors.light.text },
@@ -871,6 +951,16 @@ const styles = StyleSheet.create({
   roleCardSelected: {
     borderColor: colors.brand,
     backgroundColor: colors.light.infoContainer,
+  },
+  providerCard: {
+    borderColor: colors.brand,
+    backgroundColor: colors.light.infoContainer,
+  },
+  roleEyebrow: {
+    color: colors.brand,
+    fontFamily: typography.bold,
+    fontSize: 11,
+    letterSpacing: 0.8,
   },
   serviceCard: {
     gap: spacing.md,

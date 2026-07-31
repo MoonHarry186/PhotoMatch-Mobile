@@ -13,7 +13,7 @@ export function AuthHeader({
   return (
     <View style={styles.container}>
       <Image
-        source={require('@/assets/images/icon.png')}
+        source={require('@/assets/images/brand-symbol.png')}
         style={styles.logo}
         contentFit="contain"
       />

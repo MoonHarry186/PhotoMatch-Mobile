@@ -275,6 +275,12 @@ export type RevokePenaltyDto = {
     reason: string;
 };
 
+export type UpdateRoleDto = {
+    name?: string;
+    description?: string;
+    status?: 'ACTIVE' | 'INACTIVE';
+};
+
 export type CreateActivityFieldDto = {
     code: string;
     name: string;
@@ -351,6 +357,20 @@ export type RoleSummary = {
     code: 'CUSTOMER' | 'PHOTOGRAPHER';
     name: string;
     status?: 'ACTIVE' | 'INACTIVE';
+};
+
+export type AdminRoleResponse = {
+    id: string;
+    code: 'CUSTOMER' | 'PHOTOGRAPHER' | 'ADMIN';
+    name: string;
+    description?: string | null;
+    status: 'ACTIVE' | 'INACTIVE';
+    createdAt: string;
+    updatedAt: string;
+    _count: {
+        userRoles: number;
+        allowedFields: number;
+    };
 };
 
 export type UserSummary = {
@@ -565,7 +585,7 @@ export type DiscoveryCandidateResponse = {
     headline?: string | null;
     availabilityStatus?: string | null;
     identityVerificationStatus?: string;
-    distance: string;
+    distance: string | null;
 };
 
 export type SwipeResponse = {
@@ -580,11 +600,15 @@ export type SwipeResponse = {
 
 export type InterestResponse = {
     id: string;
-    actorUserRoleId: string;
-    targetUserRoleId: string;
-    direction: 'RIGHT' | 'ACCEPT' | 'REJECT';
-    resolvedAt?: string | null;
     createdAt: string;
+    source: 'DISCOVERY' | 'NEARBY' | 'PROFILE';
+    customer: {
+        userRoleId: string;
+        displayName?: string | null;
+        avatarAssetId?: string | null;
+        city?: string | null;
+        identityVerificationStatus?: string;
+    };
 };
 
 export type PairDecisionResponse = {
@@ -592,6 +616,20 @@ export type PairDecisionResponse = {
     decision: 'ACCEPT' | 'REJECT';
     matchId?: string | null;
     conversationId?: string | null;
+    created?: boolean;
+};
+
+export type MatchConversationResponse = {
+    id: string;
+    status: 'ACTIVE' | 'CLOSED' | 'BLOCKED';
+    lastMessageAt?: string | null;
+};
+
+export type MatchCounterpartResponse = {
+    userRoleId: string;
+    role: 'CUSTOMER' | 'PHOTOGRAPHER';
+    displayName?: string | null;
+    avatarAssetId?: string | null;
 };
 
 export type MatchResponse = {
@@ -600,8 +638,8 @@ export type MatchResponse = {
     matchedAt: string;
     endedAt?: string | null;
     endReason?: string | null;
-    conversationId?: string | null;
-    counterpart?: ProfileResponse;
+    conversation?: MatchConversationResponse;
+    counterpart: MatchCounterpartResponse;
 };
 
 export type ConversationResponse = {
@@ -5187,6 +5225,141 @@ export type AdminControllerBookingDetailResponses = {
 };
 
 export type AdminControllerBookingDetailResponse = AdminControllerBookingDetailResponses[keyof AdminControllerBookingDetailResponses];
+
+export type AdminControllerRolesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Opaque cursor returned by the previous page
+         */
+        cursor?: string;
+        limit?: number;
+        search?: string;
+        status?: 'ACTIVE' | 'INACTIVE';
+    };
+    url: '/api/v1/admin/roles';
+};
+
+export type AdminControllerRolesErrors = {
+    /**
+     * Error response
+     */
+    400: ErrorResponse;
+    /**
+     * Error response
+     */
+    401: ErrorResponse;
+    /**
+     * Error response
+     */
+    403: ErrorResponse;
+    /**
+     * Error response
+     */
+    429: ErrorResponse;
+    /**
+     * Error response
+     */
+    500: ErrorResponse;
+};
+
+export type AdminControllerRolesError = AdminControllerRolesErrors[keyof AdminControllerRolesErrors];
+
+export type AdminControllerRolesResponses = {
+    /**
+     * Successful response
+     */
+    200: AdminEntityPage;
+};
+
+export type AdminControllerRolesResponse = AdminControllerRolesResponses[keyof AdminControllerRolesResponses];
+
+export type AdminControllerRoleData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/roles/{id}';
+};
+
+export type AdminControllerRoleErrors = {
+    /**
+     * Error response
+     */
+    400: ErrorResponse;
+    /**
+     * Error response
+     */
+    401: ErrorResponse;
+    /**
+     * Error response
+     */
+    403: ErrorResponse;
+    /**
+     * Error response
+     */
+    429: ErrorResponse;
+    /**
+     * Error response
+     */
+    500: ErrorResponse;
+};
+
+export type AdminControllerRoleError = AdminControllerRoleErrors[keyof AdminControllerRoleErrors];
+
+export type AdminControllerRoleResponses = {
+    /**
+     * Successful response
+     */
+    200: AdminRoleResponse;
+};
+
+export type AdminControllerRoleResponse = AdminControllerRoleResponses[keyof AdminControllerRoleResponses];
+
+export type AdminControllerUpdateRoleData = {
+    body: UpdateRoleDto;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/roles/{id}';
+};
+
+export type AdminControllerUpdateRoleErrors = {
+    /**
+     * Error response
+     */
+    400: ErrorResponse;
+    /**
+     * Error response
+     */
+    401: ErrorResponse;
+    /**
+     * Error response
+     */
+    403: ErrorResponse;
+    /**
+     * Error response
+     */
+    429: ErrorResponse;
+    /**
+     * Error response
+     */
+    500: ErrorResponse;
+};
+
+export type AdminControllerUpdateRoleError = AdminControllerUpdateRoleErrors[keyof AdminControllerUpdateRoleErrors];
+
+export type AdminControllerUpdateRoleResponses = {
+    /**
+     * Successful response
+     */
+    200: AdminRoleResponse;
+};
+
+export type AdminControllerUpdateRoleResponse = AdminControllerUpdateRoleResponses[keyof AdminControllerUpdateRoleResponses];
 
 export type AdminControllerActivityFieldsData = {
     body?: never;

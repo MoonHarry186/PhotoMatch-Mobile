@@ -97,7 +97,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       {
         backgroundColor: '#FFFFFF',
         image: './assets/images/splash-logo.png',
-        imageWidth: 160,
+        imageWidth: 200,
         dark: {
           backgroundColor: '#FFFFFF',
           image: './assets/images/splash-logo.png',
@@ -128,9 +128,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       supportsTablet: false,
       usesAppleSignIn: true,
       associatedDomains: [`applinks:${target.associatedDomain}`],
-      config: {
-        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY,
-      },
       icon: './assets/images/icon.png',
       infoPlist: {
         CFBundleAllowMixedLocalizations: true,
@@ -138,8 +135,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     android: {
       package: target.packageName,
+      icon: './assets/images/android-icon.png',
       adaptiveIcon: {
-        backgroundColor: '#2563EB',
+        backgroundColor: '#FFFFFF',
         foregroundImage: './assets/images/adaptive-icon.png',
         monochromeImage: './assets/images/android-icon-monochrome.png',
       },
@@ -153,11 +151,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           category: ['BROWSABLE', 'DEFAULT'],
         },
       ],
-      config: {
-        googleMaps: {
-          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY,
-        },
-      },
     },
     web: {
       bundler: 'metro',

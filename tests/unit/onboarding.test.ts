@@ -2,7 +2,9 @@ import {
   canChooseAdditionalRole,
   firstIncompleteStep,
   invalidCatalogSelection,
+  nextOnboardingStep,
   portfolioWarning,
+  previousOnboardingStep,
 } from '@/features/onboarding/onboarding.model';
 import {
   personalProfileSchema,
@@ -37,9 +39,24 @@ describe('onboarding progress and validation', () => {
         missing: ['dateOfBirth', 'city'],
       }),
     ).toBe('personal');
+    expect(
+      firstIncompleteStep({
+        complete: false,
+        missing: ['providerChoice'],
+      }),
+    ).toBe('provider');
     expect(firstIncompleteStep({ complete: true, missing: [] })).toBe(
-      'summary',
+      'provider',
     );
+  });
+
+  it('moves backward and forward through the three visible steps', () => {
+    expect(previousOnboardingStep('personal')).toBeNull();
+    expect(previousOnboardingStep('avatar')).toBe('personal');
+    expect(previousOnboardingStep('provider')).toBe('avatar');
+    expect(nextOnboardingStep('personal')).toBe('avatar');
+    expect(nextOnboardingStep('avatar')).toBe('provider');
+    expect(nextOnboardingStep('provider')).toBeNull();
   });
 
   it('rejects stale or role-incompatible catalog selections locally', () => {
@@ -107,7 +124,7 @@ describe('onboarding progress and validation', () => {
     expect(photographer[2]).toBe(photographerRole.id);
   });
 
-  it('keeps an incomplete photographer non-discoverable below six images', () => {
+  it('keeps portfolio eligibility separate from account onboarding', () => {
     expect(portfolioWarning('PHOTOGRAPHER', 5)).toContain('5/6');
     expect(portfolioWarning('PHOTOGRAPHER', 6)).toBeNull();
     expect(portfolioWarning('CUSTOMER', 0)).toBeNull();
@@ -116,6 +133,6 @@ describe('onboarding progress and validation', () => {
         complete: false,
         missing: ['portfolioImages'],
       }),
-    ).toBe('portfolio');
+    ).toBe('provider');
   });
 });

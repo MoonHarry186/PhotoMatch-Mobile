@@ -9,10 +9,12 @@ import { Button, Select, TextField } from '@/components/ui';
 import { getUserErrorMessage, normalizeError } from '@/core/errors';
 import { onboardingApi } from '@/features/onboarding/onboarding.api';
 import {
+  ActivityFieldsSection,
   AvatarSection,
   LocationSection,
   PersonalProfileSection,
   PresenceControl,
+  ServicesSection,
 } from '@/features/onboarding/onboarding-sections';
 import { useSession } from '@/providers/session-provider';
 import { queryKeys } from '@/services/api/query-keys';
@@ -151,38 +153,68 @@ export function ProfileEditScreen() {
         />
       </View>
       {role === 'PHOTOGRAPHER' ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Thông tin Photographer</Text>
-          <TextField
-            label="Tiêu đề chuyên môn"
-            value={headline}
-            onChangeText={setHeadline}
-          />
-          <TextField
-            label="Số năm kinh nghiệm"
-            keyboardType="number-pad"
-            value={yearsExperience}
-            onChangeText={setYearsExperience}
-          />
-          <Select
-            label="Tình trạng nhận lịch"
-            value={availability}
-            options={[
-              { value: 'AVAILABLE', label: 'Sẵn sàng' },
-              { value: 'BUSY', label: 'Đang bận' },
-              { value: 'UNAVAILABLE', label: 'Không nhận lịch' },
-            ]}
-            onChange={(value) => setAvailability(value as typeof availability)}
-          />
-          {photographerError ? (
-            <Text style={styles.error}>{photographerError}</Text>
-          ) : null}
-          <Button
-            label="Lưu thông tin Photographer"
-            loading={photographerMutation.isPending}
-            onPress={() => void savePhotographer()}
-          />
-        </View>
+        <>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Thông tin Photographer</Text>
+            <TextField
+              label="Tiêu đề chuyên môn"
+              value={headline}
+              onChangeText={setHeadline}
+            />
+            <TextField
+              label="Số năm kinh nghiệm"
+              keyboardType="number-pad"
+              value={yearsExperience}
+              onChangeText={setYearsExperience}
+            />
+            <Select
+              label="Tình trạng nhận lịch"
+              value={availability}
+              options={[
+                { value: 'AVAILABLE', label: 'Sẵn sàng' },
+                { value: 'BUSY', label: 'Đang bận' },
+                { value: 'UNAVAILABLE', label: 'Không nhận lịch' },
+              ]}
+              onChange={(value) =>
+                setAvailability(value as typeof availability)
+              }
+            />
+            {photographerError ? (
+              <Text style={styles.error}>{photographerError}</Text>
+            ) : null}
+            <Button
+              label="Lưu thông tin Photographer"
+              loading={photographerMutation.isPending}
+              onPress={() => void savePhotographer()}
+            />
+          </View>
+          <View style={styles.section}>
+            <ActivityFieldsSection
+              scope={resolvedScope}
+              role="PHOTOGRAPHER"
+              onSaved={refresh}
+            />
+          </View>
+          <View style={styles.section}>
+            <ServicesSection
+              scope={resolvedScope}
+              role="PHOTOGRAPHER"
+              onSaved={refresh}
+            />
+          </View>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Portfolio</Text>
+            <Text style={styles.muted}>
+              Thêm tối thiểu 6 ảnh để hồ sơ đủ điều kiện xuất hiện trong Khám
+              phá.
+            </Text>
+            <Button
+              label="Quản lý portfolio"
+              variant="secondary"
+              onPress={() => router.push('/(details)/profile/portfolio')}
+            />
+          </View>
+        </>
       ) : null}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Quyền riêng tư và vị trí</Text>

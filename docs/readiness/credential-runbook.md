@@ -1,4 +1,4 @@
-# OAuth, Maps and native credential runbook
+# OAuth and native credential runbook
 
 No production credential is committed or invented by the mobile repository.
 The account owner must provision these values in the matching EAS environment.
@@ -33,13 +33,8 @@ client ID used by the native SDK and any web audience used by AuthSession.
 Apple private keys, Google service-account files and store credentials are EAS
 Sensitive/Secret values or file variables and never use `EXPO_PUBLIC_`.
 
-## Google Maps
+## Nearby location
 
-- Provision distinct iOS and Android API keys for each environment.
-- Restrict iOS key by bundle ID; restrict Android key by package and certificate.
-- Enable only Maps SDKs actually required by the app.
-- Configure daily quota and billing alerts before staging device tests.
-- Values: `EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY` and
-  `EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY`.
-- Device acceptance must verify render, permission denial/recovery and key
-  restriction on both platforms before these checklist items are closed.
+Nearby map and Google Maps credentials are deferred beyond MVP by `CR-002`.
+MVP uses Expo Location for owner-approved exact-location updates and renders
+only the backend-provided Nearby list with approximate distance buckets.

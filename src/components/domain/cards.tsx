@@ -144,15 +144,6 @@ export function FilterSheet({
   );
 }
 
-export function MapMarkerCard(props: ProfileCardProps & { distance: string }) {
-  return (
-    <View style={styles.mapCard}>
-      <ProfileSummaryCard {...props} />
-      <Text style={styles.muted}>{props.distance}</Text>
-    </View>
-  );
-}
-
 export function BookingTimeline({
   items,
 }: {
@@ -210,12 +201,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     backgroundColor: '#DBEAFE',
     borderRadius: radius.full,
-  },
-  mapCard: {
-    gap: spacing.sm,
-    padding: spacing.sm,
-    backgroundColor: '#FFFFFF',
-    borderRadius: radius.lg,
   },
   timeline: { gap: spacing.lg },
   timelineItem: { flexDirection: 'row', gap: spacing.md },

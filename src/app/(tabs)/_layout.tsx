@@ -34,13 +34,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="nearby"
-        options={{
-          title: t('tabs.nearby'),
-          tabBarIcon: ({ color }) => <TabIcon color={color} label="⌖" />,
-        }}
-      />
-      <Tabs.Screen
         name="messages"
         options={{
           title: t('tabs.messages'),

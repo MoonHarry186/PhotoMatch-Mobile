@@ -72,5 +72,6 @@ The shared error architecture, UI decision rules and feature examples are docume
 - If the default shell uses an older Node, run `nvm use` and confirm `node --version`.
 - `localhost` means the device itself. Use the computer's LAN address for a physical-device API
   URL.
-- Missing Maps/OAuth values intentionally leave provider features unavailable; do not add fake
-  production credentials to source.
+- Missing OAuth values intentionally leave provider features unavailable; do not add fake
+  production credentials to source. Nearby uses Expo Location and the backend list contract;
+  native maps are deferred beyond MVP.
