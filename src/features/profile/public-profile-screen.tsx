@@ -152,6 +152,12 @@ export function PublicProfileScreen({
   const reviewsHasNext = Boolean(reviews.hasNextPage);
   const isOwner =
     session.snapshot?.user.currentRoleId === profile.data.userRoleId;
+  const currentRole = session.snapshot?.user.roles.find(
+    (role) => role.id === session.snapshot?.user.currentRoleId,
+  )?.code;
+  const firstOfferedService = profile.data.services.find(
+    (service) => service.serviceMode === 'OFFERED',
+  );
   return (
     <AppScreen>
       <Button label="Quay lại" variant="ghost" onPress={() => router.back()} />
@@ -264,10 +270,37 @@ export function PublicProfileScreen({
           }
         />
       ) : (
-        <Text style={styles.ctaHint}>
-          Các thao tác đặt lịch hoặc liên hệ chỉ hiển thị khi hồ sơ đủ điều
-          kiện.
-        </Text>
+        <>
+          {isPhotographer &&
+          currentRole === 'CUSTOMER' &&
+          firstOfferedService ? (
+            <Button
+              label="Đặt lịch"
+              onPress={() =>
+                router.push({
+                  pathname: '/(details)/booking/create',
+                  params: {
+                    photographerRoleId: profile.data.userRoleId,
+                    serviceId: firstOfferedService.id,
+                  },
+                })
+              }
+            />
+          ) : null}
+          <Button
+            label="Chặn hoặc báo cáo"
+            variant="secondary"
+            onPress={() =>
+              router.push({
+                pathname: '/(details)/trust',
+                params: { targetUserId: profile.data.userRoleId },
+              } as never)
+            }
+          />
+          <Text style={styles.ctaHint}>
+            Các thao tác chỉ hiển thị khi hồ sơ đủ điều kiện.
+          </Text>
+        </>
       )}
     </AppScreen>
   );

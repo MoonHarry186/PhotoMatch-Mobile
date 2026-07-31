@@ -79,6 +79,16 @@ export type IncomingInterest = {
 };
 
 export function toIncomingInterest(value: InterestResponse): IncomingInterest {
+  const rawCity = value.customer.city as unknown;
+  const city =
+    typeof rawCity === 'string'
+      ? rawCity
+      : rawCity &&
+          typeof rawCity === 'object' &&
+          'name' in rawCity &&
+          typeof rawCity.name === 'string'
+        ? rawCity.name
+        : null;
   return {
     id: value.id,
     createdAt: value.createdAt,
@@ -88,7 +98,7 @@ export function toIncomingInterest(value: InterestResponse): IncomingInterest {
       displayName:
         value.customer.displayName?.trim() || 'Khách hàng PhotoMatch',
       avatarAssetId: value.customer.avatarAssetId ?? null,
-      city: value.customer.city ?? null,
+      city,
       verified: value.customer.identityVerificationStatus === 'VERIFIED',
     },
   };

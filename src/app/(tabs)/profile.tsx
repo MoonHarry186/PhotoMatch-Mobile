@@ -171,6 +171,21 @@ export default function ProfileRoute() {
         label="Chỉnh sửa hồ sơ"
         onPress={() => router.push('/(details)/profile/edit')}
       />
+      <Button
+        label="Cài đặt"
+        variant="secondary"
+        onPress={() => router.push('/(details)/settings' as never)}
+      />
+      <Button
+        label="An toàn và quyền riêng tư"
+        variant="secondary"
+        onPress={() => router.push('/(details)/trust' as never)}
+      />
+      <Button
+        label="Lịch chụp"
+        variant="secondary"
+        onPress={() => router.push('/(details)/bookings' as never)}
+      />
       {role === 'PHOTOGRAPHER' ? (
         <Button
           label="Quản lý portfolio"

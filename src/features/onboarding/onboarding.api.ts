@@ -240,6 +240,11 @@ export const onboardingApi = {
       }),
     );
   },
+  async updateSettings(
+    input: Parameters<typeof profilesControllerUpdateSettings>[0]['body'],
+  ) {
+    return unwrap(await profilesControllerUpdateSettings({ body: input }));
+  },
   async photographerSelf(): Promise<PhotographerProfile> {
     return unwrap(
       await profilesControllerPhotographerSelf(),

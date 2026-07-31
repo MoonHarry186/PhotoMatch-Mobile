@@ -1,0 +1,63 @@
+image: node:22.13.0
+
+stages:
+  - verify
+  - export
+  - e2e
+
+cache:
+  key:
+    files:
+      - package-lock.json
+  paths:
+    - node_modules/
+
+variables:
+  CI: 'true'
+  EXPO_PUBLIC_APP_ENV: development
+
+install:
+  stage: verify
+  script:
+    - npm ci
+
+lint-and-types:
+  stage: verify
+  needs: [install]
+  script:
+    - npm run format:check
+    - npm run lint
+    - npm run typecheck
+
+tests:
+  stage: verify
+  needs: [install]
+  script:
+    - npm run test:unit
+    - npm run test:contract
+
+contract-drift:
+  stage: verify
+  needs: [install]
+  script:
+    - npm run check:paths
+    - npm run check:api
+
+expo-export:
+  stage: export
+  needs: [lint-and-types, tests, contract-drift]
+  script:
+    - npm run expo:config
+    - npm run expo:export
+  artifacts:
+    when: always
+    paths:
+      - dist/
+
+e2e-smoke:
+  stage: e2e
+  needs: [expo-export]
+  rules:
+    - if: '$MAESTRO_DEVICE != null'
+  script:
+    - npm run test:e2e

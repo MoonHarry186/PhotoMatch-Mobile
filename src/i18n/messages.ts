@@ -14,8 +14,7 @@ export const messages = {
       'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.',
     'auth.email': 'Email',
     'auth.emailPlaceholder': 'Nhập địa chỉ email',
-    'auth.emailAlreadyExists':
-      'Email này đã tồn tại.',
+    'auth.emailAlreadyExists': 'Email này đã tồn tại.',
     'auth.emailNotFound': 'Không tìm thấy tài khoản sử dụng email này.',
     'auth.password': 'Mật khẩu',
     'auth.passwordPlaceholder': 'Nhập mật khẩu',

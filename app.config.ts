@@ -111,6 +111,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       { iosUrlScheme: googleIosUrlScheme(googleIosClientId) },
     ]);
   }
+  plugins.push('@sentry/react-native/expo');
 
   return {
     ...config,

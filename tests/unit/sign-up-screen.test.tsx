@@ -64,11 +64,7 @@ describe('SignUpScreen', () => {
     );
     await fireEvent.press(view.getByRole('button', { name: 'Tạo tài khoản' }));
 
-    expect(
-      await view.findByText(
-        'Email này đã tồn tại.',
-      ),
-    ).toBeTruthy();
+    expect(await view.findByText('Email này đã tồn tại.')).toBeTruthy();
     expect(mockReplace).not.toHaveBeenCalled();
   });
 });

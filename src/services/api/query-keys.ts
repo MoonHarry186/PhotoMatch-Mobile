@@ -29,6 +29,12 @@ export const queryKeys = {
   match: (value: Scope, matchId: string) =>
     [...scope(value), 'matches', matchId] as const,
   conversations: (value: Scope) => [...scope(value), 'conversations'] as const,
+  bookings: (value: Scope, filters: object = {}) =>
+    [...scope(value), 'bookings', filters] as const,
+  booking: (value: Scope, bookingId: string) =>
+    [...scope(value), 'bookings', bookingId] as const,
+  bookingReview: (value: Scope, bookingId: string) =>
+    [...scope(value), 'bookings', bookingId, 'review'] as const,
   nearbyRoot: (value: Scope) => [...scope(value), 'nearby'] as const,
   nearby: (value: Scope, filters: object) =>
     [...scope(value), 'nearby', filters] as const,
