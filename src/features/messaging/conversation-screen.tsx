@@ -5,27 +5,46 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { SymbolView } from 'expo-symbols';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+} from 'react';
+import {
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { EmptyState, ErrorState, LoadingState } from '@/components/feedback';
 import { AppScreen } from '@/components/layout/app-screen';
-import { Button, TextField } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { normalizeError } from '@/core/errors';
 import { createSubmissionKey } from '@/services/api/idempotency';
 import { getSignedAssetUrl } from '@/services/media/signed-url-cache';
 import { uploadMedia } from '@/services/media/upload';
 import { queryKeys } from '@/services/api/query-keys';
-import { colors, spacing, typography } from '@/theme';
+import { colors, gradients, radius, spacing, typography } from '@/theme';
 import { useRealtime } from '@/providers/websocket-provider';
+import { useTheme } from '@/providers/theme-provider';
 import { discoveryApi } from '@/features/discovery/discovery.api';
 import { profileApi } from '@/features/profile/profile.api';
 
 import { ChatBubble } from './chat-bubble';
 import { messagingApi } from './messaging.api';
 import { reconcileMessages, type MessageView } from './messaging.types';
+
+type Palette = typeof colors.light | typeof colors.dark;
 
 export function ConversationScreen({
   conversationId,
@@ -37,8 +56,11 @@ export function ConversationScreen({
   const router = useRouter();
   const queryClient = useQueryClient();
   const realtime = useRealtime();
+  const theme = useTheme();
+  const palette = theme.resolved === 'dark' ? colors.dark : colors.light;
   const [text, setText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [showAttachments, setShowAttachments] = useState(false);
   const keys = queryKeys.detail(scope, 'conversation', conversationId);
   const messagesKey = [...keys, 'messages', conversationId] as const;
   const conversation = useQuery({
@@ -75,6 +97,7 @@ export function ConversationScreen({
     [history.data],
   );
   const draftKeys = useRef(new Map<string, string>());
+  const listRef = useRef<FlatList<MessageView>>(null);
   const receiptKeys = useRef(new Set<string>());
   useEffect(() => {
     if (!conversation.data || conversation.data.status !== 'ACTIVE') return;
@@ -220,20 +243,32 @@ export function ConversationScreen({
   return (
     <AppScreen
       scroll={false}
+      contentStyle={styles.screenContent}
       header={
-        <View style={styles.header}>
-          <Button
+        <View style={[styles.header, { backgroundColor: palette.background }]}>
+          <HeaderIcon
+            icon={{
+              ios: 'chevron.left',
+              android: 'arrow_back',
+              web: 'arrow_back',
+            }}
             label="Quay lại"
-            variant="ghost"
             onPress={() => router.back()}
           />
-          <Text style={styles.title}>Tin nhắn</Text>
+          <ConversationHeader
+            displayName={
+              match.data?.counterpart.displayName ?? 'Cuộc trò chuyện'
+            }
+            avatarAssetId={match.data?.counterpart.avatarAssetId}
+            active={conversation.data.status === 'ACTIVE'}
+            palette={palette}
+          />
           {conversation.data?.status === 'ACTIVE' &&
           match.data?.counterpart.role === 'PHOTOGRAPHER' &&
           counterpartProfile.data?.services[0] ? (
-            <Button
-              label="Đặt lịch"
-              variant="secondary"
+            <HeaderIcon
+              icon={{ ios: 'calendar', android: 'event', web: 'event' }}
+              label="Đặt lịch chụp"
               onPress={() =>
                 router.push({
                   pathname: '/(details)/booking/create',
@@ -249,68 +284,146 @@ export function ConversationScreen({
         </View>
       }
       footer={
-        <View style={styles.composer}>
+        <View
+          style={[
+            styles.composer,
+            {
+              backgroundColor: palette.background,
+              borderTopColor: palette.border,
+            },
+          ]}
+        >
           {error ? <Text style={styles.error}>{error}</Text> : null}
           {closed ? (
             <Text style={styles.closed}>
               Cuộc trò chuyện đã đóng. Lịch sử vẫn được giữ lại.
             </Text>
           ) : null}
-          <TextField
-            label="Tin nhắn"
-            value={text}
-            onChangeText={setText}
-            placeholder="Viết tin nhắn…"
-            editable={!closed}
-            onSubmitEditing={submit}
-            returnKeyType="send"
-          />
-          <View style={styles.actions}>
-            <Button
-              label="Gửi ảnh"
-              variant="secondary"
-              disabled={closed}
-              onPress={async () => {
-                const result = await ImagePicker.launchImageLibraryAsync({
-                  mediaTypes: ['images'],
-                });
-                const asset = result.assets?.[0];
-                if (!result.canceled && asset)
-                  await uploadAttachment('CHAT_IMAGE', asset);
-              }}
-            />
-            <Button
-              label="Gửi tệp"
-              variant="secondary"
-              disabled={closed}
-              onPress={async () => {
-                const result = await DocumentPicker.getDocumentAsync({
-                  copyToCacheDirectory: true,
-                });
-                if (!result.canceled && result.assets[0])
-                  await uploadAttachment('CHAT_FILE', result.assets[0]);
-              }}
-            />
-            <Button
-              label="Gửi"
-              disabled={closed || !text.trim()}
-              loading={send.isPending}
+          {showAttachments ? (
+            <View style={styles.attachmentMenu}>
+              <Button
+                label="Ảnh"
+                variant="secondary"
+                disabled={closed}
+                onPress={async () => {
+                  setShowAttachments(false);
+                  const result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: ['images'],
+                  });
+                  const asset = result.assets?.[0];
+                  if (!result.canceled && asset)
+                    await uploadAttachment('CHAT_IMAGE', asset);
+                }}
+              />
+              <Button
+                label="Tệp"
+                variant="secondary"
+                disabled={closed}
+                onPress={async () => {
+                  setShowAttachments(false);
+                  const result = await DocumentPicker.getDocumentAsync({
+                    copyToCacheDirectory: true,
+                  });
+                  if (!result.canceled && result.assets[0])
+                    await uploadAttachment('CHAT_FILE', result.assets[0]);
+                }}
+              />
+            </View>
+          ) : null}
+          <View style={styles.composerLine}>
+            <View
+              style={[
+                styles.composerRow,
+                {
+                  backgroundColor: palette.surfaceVariant,
+                  borderColor: palette.border,
+                },
+              ]}
+            >
+              <HeaderIcon
+                icon={{
+                  ios: 'face.smiling',
+                  android: 'emoji_emotions',
+                  web: 'sentiment_satisfied',
+                }}
+                label="Thêm biểu tượng cảm xúc"
+                tintColor={palette.muted}
+                onPress={() => undefined}
+              />
+              <TextInput
+                value={text}
+                onChangeText={setText}
+                placeholder="Type a message..."
+                placeholderTextColor={palette.muted}
+                editable={!closed}
+                onSubmitEditing={submit}
+                returnKeyType="send"
+                style={[styles.input, { color: palette.text }]}
+                accessibilityLabel="Tin nhắn"
+              />
+              <HeaderIcon
+                icon={{
+                  ios: 'paperclip',
+                  android: 'attach_file',
+                  web: 'attach_file',
+                }}
+                label="Đính kèm ảnh hoặc tệp"
+                tintColor={palette.muted}
+                onPress={() => setShowAttachments((value) => !value)}
+              />
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Gửi tin nhắn"
+              disabled={closed || !text.trim() || send.isPending}
               onPress={submit}
-            />
+              style={({ pressed }) => [
+                styles.sendButton,
+                (pressed || closed || !text.trim()) && styles.sendDisabled,
+              ]}
+            >
+              <LinearGradient
+                colors={gradients.brand}
+                style={styles.sendGradient}
+              >
+                <SymbolView
+                  name={{
+                    ios: 'paperplane.fill',
+                    android: 'send',
+                    web: 'send',
+                  }}
+                  size={23}
+                  tintColor="#FFFFFF"
+                />
+              </LinearGradient>
+            </Pressable>
           </View>
         </View>
       }
     >
       <FlatList
+        ref={listRef}
         data={messages}
         keyExtractor={(item) => item.id || item.clientMessageId}
-        contentContainerStyle={styles.messages}
+        contentContainerStyle={[
+          styles.messages,
+          { backgroundColor: palette.background },
+        ]}
+        ListHeaderComponent={
+          <DateSeparator label="Hôm nay" palette={palette} />
+        }
+        onContentSizeChange={() =>
+          requestAnimationFrame(() =>
+            listRef.current?.scrollToEnd({ animated: false }),
+          )
+        }
         onEndReached={() => {
           if (history.hasNextPage) void history.fetchNextPage();
         }}
         renderItem={({ item }) => (
           <ChatBubble
             message={item}
+            isMine={item.senderUserId === scope.userId}
             onRetry={() => {
               if (item.content)
                 send.mutate({
@@ -332,26 +445,211 @@ export function ConversationScreen({
 }
 
 const styles = StyleSheet.create({
+  screenContent: { padding: 0, gap: 0 },
   header: {
+    minHeight: 64,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  title: {
-    color: colors.light.text,
+  headerActions: { flexDirection: 'row', marginLeft: 'auto' },
+  iconButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.full,
+  },
+  headerIdentity: { flexDirection: 'row', alignItems: 'center' },
+  headerCopy: { flex: 1, gap: 1, marginLeft: spacing.xs },
+  headerName: { fontFamily: typography.medium, fontSize: 16 },
+  headerStatus: {
+    color: colors.success,
+    fontFamily: typography.medium,
+    fontSize: 12,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'visible',
+  },
+  avatarImage: { width: 40, height: 40, borderRadius: 20 },
+  avatarFallback: {
+    color: '#FFFFFF',
     fontFamily: typography.bold,
-    fontSize: 20,
+    fontSize: 16,
   },
-  messages: { flexGrow: 1, gap: spacing.md, padding: spacing.md },
+  onlineDot: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    right: -1,
+    bottom: -1,
+    borderRadius: 6,
+    backgroundColor: '#44DFAB',
+    borderWidth: 2,
+  },
+  messages: {
+    flexGrow: 1,
+    gap: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  dateSeparator: {
+    alignSelf: 'center',
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    marginVertical: spacing.md,
+  },
+  dateText: { fontFamily: typography.medium, fontSize: 12 },
   composer: {
     gap: spacing.sm,
-    padding: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.light.border,
-    backgroundColor: colors.light.surface,
   },
-  actions: { flexDirection: 'row', gap: spacing.xs },
-  error: { color: colors.light.error },
+  attachmentMenu: { flexDirection: 'row', gap: spacing.sm },
+  composerLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  composerRow: {
+    flex: 1,
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.xs,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  input: {
+    flex: 1,
+    minHeight: 46,
+    paddingHorizontal: spacing.xs,
+    fontFamily: typography.regular,
+    fontSize: 16,
+  },
+  sendButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  sendGradient: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  sendDisabled: { opacity: 0.45 },
+  error: { color: colors.light.error, fontSize: 12 },
   closed: { color: colors.light.muted, fontSize: 13 },
 });
+
+function HeaderIcon({
+  icon,
+  label,
+  onPress,
+  tintColor = colors.brand,
+}: {
+  icon: ComponentProps<typeof SymbolView>['name'];
+  label: string;
+  onPress: () => void;
+  tintColor?: string;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={6}
+      onPress={onPress}
+      style={styles.iconButton}
+    >
+      <SymbolView name={icon} size={24} tintColor={tintColor} />
+    </Pressable>
+  );
+}
+
+function DateSeparator({
+  label,
+  palette,
+}: {
+  label: string;
+  palette: Palette;
+}) {
+  return (
+    <View
+      style={[
+        styles.dateSeparator,
+        { backgroundColor: palette.surfaceVariant },
+      ]}
+    >
+      <Text style={[styles.dateText, { color: palette.muted }]}>{label}</Text>
+    </View>
+  );
+}
+
+function ConversationHeader({
+  displayName,
+  avatarAssetId,
+  active,
+  palette,
+}: {
+  displayName: string;
+  avatarAssetId?: string | null;
+  active: boolean;
+  palette: Palette;
+}) {
+  const avatar = useQuery({
+    queryKey: ['signed-conversation-avatar', avatarAssetId],
+    queryFn: () => getSignedAssetUrl(avatarAssetId!),
+    enabled: Boolean(avatarAssetId),
+  });
+  return (
+    <View style={styles.headerCopy}>
+      <View style={styles.headerIdentity}>
+        <View style={[styles.avatar, { backgroundColor: colors.brand }]}>
+          {avatar.data ? (
+            <Image
+              source={{ uri: avatar.data }}
+              style={styles.avatarImage}
+              contentFit="cover"
+            />
+          ) : (
+            <Text style={styles.avatarFallback}>
+              {displayName.slice(0, 1).toUpperCase()}
+            </Text>
+          )}
+          {active ? (
+            <View
+              style={[styles.onlineDot, { borderColor: palette.background }]}
+            />
+          ) : null}
+        </View>
+        <View style={styles.headerCopy}>
+          <Text
+            numberOfLines={1}
+            style={[styles.headerName, { color: palette.text }]}
+          >
+            {displayName}
+          </Text>
+          <Text style={styles.headerStatus}>
+            {active ? 'Active now' : 'Offline'}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}

@@ -11,6 +11,7 @@ import { StatusBadge } from '@/components/domain';
 import { EmptyState, ErrorState, LoadingState } from '@/components/feedback';
 import { Button, ConfirmDialog } from '@/components/ui';
 import { getUserErrorMessage, normalizeError } from '@/core/errors';
+import { useI18n } from '@/i18n/i18n-provider';
 import { createSubmissionKey } from '@/services/api/idempotency';
 import { queryKeys } from '@/services/api/query-keys';
 import { colors, elevation, radius, spacing, typography } from '@/theme';
@@ -33,6 +34,7 @@ export function IncomingInterests({
   scope: { userId: string; roleId: string };
   onFeedback: (message: string) => void;
 }) {
+  const { locale, t } = useI18n();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [decision, setDecision] = useState<Decision | null>(null);
@@ -82,13 +84,13 @@ export function IncomingInterests({
         }),
       ]);
       if (response.decision === 'ACCEPT' && response.matchId) {
-        onFeedback('Đã chấp nhận. Kết nối và cuộc trò chuyện đã sẵn sàng.');
+        onFeedback(t('discovery.interests.acceptedFeedback'));
         router.push({
           pathname: '/(details)/match/[id]',
           params: { id: response.matchId },
         });
       } else {
-        onFeedback('Đã từ chối yêu cầu quan tâm.');
+        onFeedback(t('discovery.interests.rejectedFeedback'));
       }
     },
   });
@@ -98,20 +100,20 @@ export function IncomingInterests({
     : null;
 
   if (incoming.isPending)
-    return <LoadingState label="Đang tải yêu cầu quan tâm…" />;
+    return <LoadingState label={t('discovery.interests.loading')} />;
   if (incoming.isError)
     return (
       <ErrorState
-        title="Không thể tải yêu cầu"
-        primaryActionLabel="Thử lại"
+        title={t('discovery.interests.error')}
+        primaryActionLabel={t('common.retry')}
         onPrimaryAction={() => void incoming.refetch()}
       />
     );
   if (!items.length)
     return (
       <EmptyState
-        title="Chưa có yêu cầu mới"
-        message="Khi Customer quan tâm đến bạn, yêu cầu sẽ xuất hiện tại đây."
+        title={t('discovery.interests.empty')}
+        message={t('discovery.interests.emptyMessage')}
       />
     );
 
@@ -119,8 +121,8 @@ export function IncomingInterests({
     <View style={styles.list}>
       {normalizedError ? (
         <Text accessibilityRole="alert" style={styles.error}>
-          {relationshipErrorMessage(normalizedError) ??
-            getUserErrorMessage(normalizedError)}
+          {relationshipErrorMessage(normalizedError, locale) ??
+            getUserErrorMessage(normalizedError, locale)}
         </Text>
       ) : null}
       {items.map((interest) => (
@@ -140,7 +142,7 @@ export function IncomingInterests({
       ))}
       {incoming.hasNextPage ? (
         <Button
-          label="Xem thêm yêu cầu"
+          label={t('discovery.interests.loadMore')}
           variant="secondary"
           loading={incoming.isFetchingNextPage}
           onPress={() => void incoming.fetchNextPage()}
@@ -171,29 +173,39 @@ function InterestCard({
   onAccept: () => void;
   onReject: () => void;
 }) {
+  const { locale, t } = useI18n();
+  const name = interest.customer.displayName || t('discovery.default.customer');
   return (
     <View style={styles.card}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Mở hồ sơ ${interest.customer.displayName}`}
+        accessibilityLabel={t('discovery.interests.openProfile', { name })}
         onPress={onOpenProfile}
         style={styles.summary}
       >
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
-            {interest.customer.displayName.slice(0, 1).toUpperCase()}
+            {name.slice(0, 1).toUpperCase()}
           </Text>
         </View>
         <View style={styles.flex}>
-          <Text style={styles.name}>{interest.customer.displayName}</Text>
+          <Text style={styles.name}>{name}</Text>
           <Text style={styles.meta}>
-            {interest.customer.city ?? 'Chưa cập nhật thành phố'} ·{' '}
-            {new Date(interest.createdAt).toLocaleDateString('vi-VN')}
+            {interest.customer.city ?? t('discovery.interests.cityUnknown')} ·{' '}
+            {new Date(interest.createdAt).toLocaleDateString(
+              locale === 'vi' ? 'vi-VN' : 'en-US',
+            )}
           </Text>
           <View style={styles.badges}>
-            <StatusBadge label="Đang chờ phản hồi" tone="warning" />
+            <StatusBadge
+              label={t('discovery.interests.pending')}
+              tone="warning"
+            />
             {interest.customer.verified ? (
-              <StatusBadge label="Đã xác minh" tone="success" />
+              <StatusBadge
+                label={t('discovery.interests.verified')}
+                tone="success"
+              />
             ) : null}
           </View>
         </View>
@@ -201,14 +213,18 @@ function InterestCard({
       <View style={styles.actions}>
         <View style={styles.flex}>
           <Button
-            label="Từ chối"
+            label={t('discovery.interests.reject')}
             variant="secondary"
             disabled={pending}
             onPress={onReject}
           />
         </View>
         <View style={styles.flex}>
-          <Button label="Chấp nhận" disabled={pending} onPress={onAccept} />
+          <Button
+            label={t('discovery.interests.accept')}
+            disabled={pending}
+            onPress={onAccept}
+          />
         </View>
       </View>
     </View>
@@ -226,21 +242,28 @@ function DecisionConfirmation({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useI18n();
   const accepting = decision?.value === 'ACCEPT';
+  const name =
+    decision?.interest.customer.displayName || t('discovery.default.customer');
   return (
     <ConfirmDialog
       visible={Boolean(decision)}
       title={
         accepting
-          ? `Kết nối với ${decision?.interest.customer.displayName}?`
-          : `Từ chối ${decision?.interest.customer.displayName}?`
+          ? t('discovery.interests.acceptTitle', { name })
+          : t('discovery.interests.rejectTitle', { name })
       }
       message={
         accepting
-          ? 'Chấp nhận sẽ tạo hoặc khôi phục một kết nối và cuộc trò chuyện theo kết quả canonical từ server.'
-          : 'Yêu cầu sẽ được giải quyết và không còn nằm trong danh sách đang chờ.'
+          ? t('discovery.interests.acceptMessage')
+          : t('discovery.interests.rejectMessage')
       }
-      confirmLabel={accepting ? 'Chấp nhận' : 'Từ chối'}
+      confirmLabel={
+        accepting
+          ? t('discovery.interests.accept')
+          : t('discovery.interests.reject')
+      }
       destructive={!accepting}
       loading={loading}
       onConfirm={onConfirm}

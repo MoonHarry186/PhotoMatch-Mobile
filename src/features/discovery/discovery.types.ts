@@ -5,6 +5,7 @@ import type {
   InterestResponse,
   MatchResponse,
 } from '@/generated/api/types.gen';
+import { messages, type Locale } from '@/i18n/messages';
 
 export const LEFT_COOLDOWN_DAYS = 7;
 export const REMATCH_COOLDOWN_DAYS = 30;
@@ -56,7 +57,7 @@ export function toDiscoveryCandidate(
 ): DiscoveryCandidate {
   return {
     userRoleId: value.userRoleId,
-    displayName: value.displayName?.trim() || 'Người dùng PhotoMatch',
+    displayName: value.displayName?.trim() || '',
     avatarAssetId: value.avatarAssetId ?? null,
     headline: value.headline ?? null,
     availabilityStatus: value.availabilityStatus ?? null,
@@ -95,8 +96,7 @@ export function toIncomingInterest(value: InterestResponse): IncomingInterest {
     source: value.source,
     customer: {
       userRoleId: value.customer.userRoleId,
-      displayName:
-        value.customer.displayName?.trim() || 'Khách hàng PhotoMatch',
+      displayName: value.customer.displayName?.trim() || '',
       avatarAssetId: value.customer.avatarAssetId ?? null,
       city,
       verified: value.customer.identityVerificationStatus === 'VERIFIED',
@@ -134,27 +134,34 @@ export function roleDiscoveryActions(role: 'CUSTOMER' | 'PHOTOGRAPHER') {
       };
 }
 
-export function relationshipErrorMessage(error: {
-  businessCode?: string;
-}): string | null {
+export function relationshipErrorMessage(
+  error: {
+    businessCode?: string;
+  },
+  locale: Locale = 'vi',
+): string | null {
   if (error.businessCode === 'FEATURE_NOT_AVAILABLE')
-    return 'Photographer chưa thể chủ động gửi quan tâm trong MVP.';
+    return messages[locale]['discovery.relation.featureUnavailable'];
   if (error.businessCode === 'REMATCH_COOLDOWN')
-    return `Hai tài khoản cần chờ ${REMATCH_COOLDOWN_DAYS} ngày trước khi kết nối lại.`;
+    return messages[locale]['discovery.relation.rematchCooldown'].replace(
+      '{days}',
+      String(REMATCH_COOLDOWN_DAYS),
+    );
   if (error.businessCode === 'RELATIONSHIP_BLOCKED')
-    return 'Không thể tương tác vì mối quan hệ đang bị chặn.';
+    return messages[locale]['discovery.relation.blocked'];
   if (error.businessCode === 'CANDIDATE_INELIGIBLE')
-    return 'Hồ sơ này hiện không còn đủ điều kiện xuất hiện trong Khám phá.';
+    return messages[locale]['discovery.relation.ineligible'];
   return null;
 }
 
 export function locationPermissionMessage(
   permission:
     'undetermined' | 'granted' | 'denied' | 'restricted' | 'services-disabled',
+  locale: Locale = 'vi',
 ) {
   if (permission === 'services-disabled')
-    return 'Dịch vụ vị trí đang tắt. Hãy bật lại trước khi dùng Gần tôi.';
+    return messages[locale]['discovery.location.servicesDisabled'];
   if (permission === 'restricted')
-    return 'Quyền vị trí đang bị chặn. Hãy cho phép trong Cài đặt để dùng Gần tôi.';
-  return 'Bạn cần cấp quyền vị trí để bật bộ lọc Gần tôi.';
+    return messages[locale]['discovery.location.restricted'];
+  return messages[locale]['discovery.location.permission'];
 }
