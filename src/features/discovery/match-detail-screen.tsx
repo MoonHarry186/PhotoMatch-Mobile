@@ -12,6 +12,7 @@ import {
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button, ConfirmDialog, TextField } from '@/components/ui';
 import { getUserErrorMessage, normalizeError } from '@/core/errors';
+import { useI18n } from '@/i18n/i18n-provider';
 import { createSubmissionKey } from '@/services/api/idempotency';
 import { queryKeys } from '@/services/api/query-keys';
 import { colors, elevation, radius, spacing, typography } from '@/theme';
@@ -27,6 +28,7 @@ export function MatchDetailScreen({
   matchId: string;
   scope: { userId: string; roleId: string };
 }) {
+  const { locale, t } = useI18n();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [reason, setReason] = useState('');
@@ -60,30 +62,33 @@ export function MatchDetailScreen({
     },
   });
 
-  if (match.isPending) return <LoadingState label="Đang tải kết nối…" />;
+  if (match.isPending)
+    return <LoadingState label={t('discovery.match.loading')} />;
   if (match.isError)
     return (
       <ErrorState
-        title="Không thể tải kết nối"
-        primaryActionLabel="Thử lại"
+        title={t('discovery.match.error')}
+        primaryActionLabel={t('common.retry')}
         onPrimaryAction={() => void match.refetch()}
-        secondaryActionLabel="Quay lại"
+        secondaryActionLabel={t('discovery.match.back')}
         onSecondaryAction={() => router.back()}
       />
     );
 
   const value = match.data;
+  const name =
+    value.counterpart.displayName || t('discovery.matches.defaultName');
   const error = unmatch.error ? normalizeError(unmatch.error) : null;
   return (
     <AppScreen>
       <View style={styles.header}>
         <Button
-          label="Quay lại"
+          label={t('discovery.match.back')}
           variant="ghost"
           onPress={() => router.back()}
         />
         <StatusBadge
-          label={matchStatusLabel(value.status)}
+          label={matchStatusLabel(value.status, locale)}
           tone={value.status === 'ACTIVE' ? 'success' : 'neutral'}
         />
       </View>
@@ -94,21 +99,31 @@ export function MatchDetailScreen({
           </Text>
         </View>
         <Text accessibilityRole="header" style={styles.title}>
-          {value.counterpart.displayName ?? 'Người dùng PhotoMatch'}
+          {name}
         </Text>
         <Text style={styles.meta}>
-          Kết nối từ {new Date(value.matchedAt).toLocaleString('vi-VN')}
+          {t('discovery.match.matchedAt', {
+            date: new Date(value.matchedAt).toLocaleString(
+              locale === 'vi' ? 'vi-VN' : 'en-US',
+            ),
+          })}
         </Text>
         {value.endedAt ? (
           <Text style={styles.meta}>
-            Kết thúc lúc {new Date(value.endedAt).toLocaleString('vi-VN')}
+            {t('discovery.match.endedAt', {
+              date: new Date(value.endedAt).toLocaleString(
+                locale === 'vi' ? 'vi-VN' : 'en-US',
+              ),
+            })}
           </Text>
         ) : null}
         {value.endReason ? (
-          <Text style={styles.meta}>Lý do: {value.endReason}</Text>
+          <Text style={styles.meta}>
+            {t('discovery.match.reason', { reason: value.endReason })}
+          </Text>
         ) : null}
         <Button
-          label="Xem hồ sơ"
+          label={t('discovery.match.profile')}
           variant="secondary"
           onPress={() =>
             router.push({
@@ -121,8 +136,8 @@ export function MatchDetailScreen({
           <Button
             label={
               value.status === 'ACTIVE'
-                ? 'Mở cuộc trò chuyện'
-                : 'Xem lịch sử trò chuyện'
+                ? t('discovery.match.openConversation')
+                : t('discovery.match.viewConversation')
             }
             onPress={() =>
               router.push({
@@ -136,18 +151,18 @@ export function MatchDetailScreen({
 
       {completed ? (
         <ActionFeedback
-          title="Đã kết thúc kết nối"
-          message="Lịch sử được giữ lại trên server và cuộc trò chuyện đã đóng, nên không thể gửi tin nhắn mới."
+          title={t('discovery.match.completedTitle')}
+          message={t('discovery.match.completedMessage')}
         />
       ) : null}
       {value.status === 'ACTIVE' ? (
         <View style={styles.dangerZone}>
-          <Text style={styles.sectionTitle}>Kết thúc kết nối</Text>
-          <Text style={styles.meta}>
-            Hành động này đóng cuộc trò chuyện nhưng không xóa lịch sử.
+          <Text style={styles.sectionTitle}>
+            {t('discovery.match.endTitle')}
           </Text>
+          <Text style={styles.meta}>{t('discovery.match.endMessage')}</Text>
           <TextField
-            label="Lý do"
+            label={t('discovery.match.reasonLabel')}
             value={reason}
             maxLength={500}
             multiline
@@ -155,28 +170,29 @@ export function MatchDetailScreen({
           />
           {error ? (
             <Text accessibilityRole="alert" style={styles.error}>
-              {relationshipErrorMessage(error) ?? getUserErrorMessage(error)}
+              {relationshipErrorMessage(error, locale) ??
+                getUserErrorMessage(error, locale)}
             </Text>
           ) : null}
           <Button
-            label="Kết thúc kết nối"
+            label={t('discovery.match.end')}
             variant="danger"
             disabled={!reason.trim()}
             onPress={() => setConfirmVisible(true)}
           />
         </View>
       ) : (
-        <Text style={styles.closed}>
-          Kết nối không còn hoạt động. Lịch sử vẫn được giữ nhưng không được tạo
-          tương tác mới từ màn hình này.
-        </Text>
+        <Text style={styles.closed}>{t('discovery.match.closedMessage')}</Text>
       )}
 
       <ConfirmDialog
         visible={confirmVisible}
-        title={`Kết thúc kết nối với ${value.counterpart.displayName ?? 'người dùng này'}?`}
-        message="Cuộc trò chuyện sẽ đóng và không thể gửi tin nhắn mới. Lịch sử vẫn được giữ lại."
-        confirmLabel="Kết thúc kết nối"
+        title={t('discovery.match.confirmTitle', {
+          name:
+            value.counterpart.displayName || t('discovery.match.defaultName'),
+        })}
+        message={t('discovery.match.confirmMessage')}
+        confirmLabel={t('discovery.match.end')}
         destructive
         loading={unmatch.isPending}
         onConfirm={() => unmatch.mutate()}

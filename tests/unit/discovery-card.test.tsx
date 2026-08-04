@@ -37,36 +37,41 @@ jest.mock('react-native-reanimated', () => {
   };
 });
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { DiscoveryCard } from '@/features/discovery/discovery-card';
+import { I18nProvider } from '@/i18n/i18n-provider';
 
 describe('DiscoveryCard accessible actions', () => {
   it('offers button equivalents and locks both actions while pending', async () => {
     const onAction = jest.fn();
     const onOpenProfile = jest.fn();
+    await AsyncStorage.setItem('photomatch.locale.v1', 'vi');
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, gcTime: Infinity } },
     });
     const view = await render(
-      <QueryClientProvider client={queryClient}>
-        <DiscoveryCard
-          candidate={{
-            userRoleId: 'role-1',
-            displayName: 'An',
-            avatarAssetId: null,
-            headline: 'Ảnh cưới',
-            availabilityStatus: 'AVAILABLE',
-            verified: true,
-            distance: '3-5 km',
-          }}
-          scope={{ userId: 'user-1', roleId: 'customer-role' }}
-          pending={false}
-          onAction={onAction}
-          onOpenProfile={onOpenProfile}
-        />
-      </QueryClientProvider>,
+      <I18nProvider>
+        <QueryClientProvider client={queryClient}>
+          <DiscoveryCard
+            candidate={{
+              userRoleId: 'role-1',
+              displayName: 'An',
+              avatarAssetId: null,
+              headline: 'Ảnh cưới',
+              availabilityStatus: 'AVAILABLE',
+              verified: true,
+              distance: '3-5 km',
+            }}
+            scope={{ userId: 'user-1', roleId: 'customer-role' }}
+            pending={false}
+            onAction={onAction}
+            onOpenProfile={onOpenProfile}
+          />
+        </QueryClientProvider>
+      </I18nProvider>,
     );
     expect(view.getByText('Ảnh cưới')).toBeTruthy();
     await fireEvent.press(view.getByRole('button', { name: 'Bỏ qua An' }));
@@ -77,23 +82,25 @@ describe('DiscoveryCard accessible actions', () => {
     expect(onOpenProfile).toHaveBeenCalledTimes(1);
 
     await view.rerender(
-      <QueryClientProvider client={queryClient}>
-        <DiscoveryCard
-          candidate={{
-            userRoleId: 'role-1',
-            displayName: 'An',
-            avatarAssetId: null,
-            headline: null,
-            availabilityStatus: null,
-            verified: false,
-            distance: '3-5 km',
-          }}
-          scope={{ userId: 'user-1', roleId: 'customer-role' }}
-          pending
-          onAction={onAction}
-          onOpenProfile={jest.fn()}
-        />
-      </QueryClientProvider>,
+      <I18nProvider>
+        <QueryClientProvider client={queryClient}>
+          <DiscoveryCard
+            candidate={{
+              userRoleId: 'role-1',
+              displayName: 'An',
+              avatarAssetId: null,
+              headline: null,
+              availabilityStatus: null,
+              verified: false,
+              distance: '3-5 km',
+            }}
+            scope={{ userId: 'user-1', roleId: 'customer-role' }}
+            pending
+            onAction={onAction}
+            onOpenProfile={jest.fn()}
+          />
+        </QueryClientProvider>
+      </I18nProvider>,
     );
     expect(view.getByRole('button', { name: 'Bỏ qua An' })).toBeDisabled();
     expect(view.getByRole('button', { name: 'Quan tâm An' })).toBeDisabled();

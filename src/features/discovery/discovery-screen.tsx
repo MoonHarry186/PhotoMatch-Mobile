@@ -5,17 +5,16 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
+import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   AppBanner,
   AppSnackbar,
-  EmptyState,
   ErrorState,
-  LoadingState,
   type SnackbarPayload,
 } from '@/components/feedback';
 import { AppScreen } from '@/components/layout/app-screen';
@@ -25,13 +24,19 @@ import {
   getLocationPermissionState,
   requestLocationPermission,
 } from '@/features/nearby/location-permission';
+import { useI18n } from '@/i18n/i18n-provider';
 import { useSession } from '@/providers/session-provider';
 import { queryKeys } from '@/services/api/query-keys';
 import { useNavigationStore } from '@/stores/navigation.store';
 import { colors, radius, spacing, typography } from '@/theme';
 
-import { DiscoveryCard } from './discovery-card';
+import { DiscoveryCardSkeleton, DiscoveryCardStack } from './discovery-card';
+import {
+  DiscoveryEmptyState,
+  DiscoveryErrorState,
+} from './discovery-empty-state';
 import { DiscoveryFilterSheet } from './discovery-filter-sheet';
+import { DiscoveryHeader } from './discovery-header';
 import { discoveryApi } from './discovery.api';
 import { useDiscoveryStore } from './discovery.store';
 import {
@@ -48,6 +53,7 @@ import { MatchList } from './match-list';
 type DiscoveryView = 'feed' | 'interests' | 'matches';
 
 export function DiscoveryScreen() {
+  const { locale, t } = useI18n();
   const router = useRouter();
   const queryClient = useQueryClient();
   const user = useSession().snapshot?.user;
@@ -119,10 +125,15 @@ export function DiscoveryScreen() {
   const { fetchNextPage, hasNextPage, isFetchingNextPage } = candidates;
 
   useEffect(() => {
-    if (!current && hasNextPage && !isFetchingNextPage) {
+    if (visibleCandidates.length <= 3 && hasNextPage && !isFetchingNextPage) {
       void fetchNextPage();
     }
-  }, [current, fetchNextPage, hasNextPage, isFetchingNextPage]);
+  }, [
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    visibleCandidates.length,
+  ]);
 
   useEffect(() => {
     let active = true;
@@ -173,8 +184,8 @@ export function DiscoveryScreen() {
       setFeedback({
         message:
           response.direction === 'RIGHT'
-            ? 'Đã gửi quan tâm. Đây chưa phải là kết nối; hãy chờ Photographer phản hồi.'
-            : `Đã bỏ qua. Hồ sơ sẽ không xuất hiện lại trong khoảng ${LEFT_COOLDOWN_DAYS} ngày.`,
+            ? t('discovery.feedback.interestSent')
+            : t('discovery.feedback.skipped', { days: LEFT_COOLDOWN_DAYS }),
       });
       void queryClient.invalidateQueries({
         queryKey: queryKeys.interests(scope),
@@ -193,7 +204,7 @@ export function DiscoveryScreen() {
           ? currentPermission
           : await requestLocationPermission();
       if (permission !== 'granted') {
-        throw new Error(locationPermissionMessage(permission));
+        throw new Error(locationPermissionMessage(permission, locale));
       }
       await discoveryApi.updateExactLocation(await captureCurrentLocation());
     }
@@ -212,127 +223,172 @@ export function DiscoveryScreen() {
   );
 
   if (!user?.currentRoleId || !role || !actions)
-    return <ErrorState title="Chưa xác định được vai trò hiện tại" />;
+    return <ErrorState title={t('discovery.roleUnknown')} />;
 
   return (
-    <AppScreen scroll={activeView !== 'feed'}>
+    <AppScreen
+      scroll={activeView !== 'feed'}
+      contentStyle={
+        activeView === 'feed' || activeView === 'matches'
+          ? styles.immersiveContent
+          : undefined
+      }
+      safeStyle={
+        activeView === 'feed' || activeView === 'matches'
+          ? styles.immersiveSafe
+          : undefined
+      }
+      safeEdges={
+        activeView === 'feed' || activeView === 'matches'
+          ? ['top', 'left', 'right']
+          : undefined
+      }
+    >
+      <StatusBar
+        style={
+          activeView === 'feed' || activeView === 'matches' ? 'light' : 'auto'
+        }
+      />
       <AppBanner
         visible={bannerVisible && role === 'PHOTOGRAPHER'}
-        title="Thiết lập hồ sơ Photographer"
-        message="Bổ sung dịch vụ, mức giá và portfolio để bắt đầu cung cấp dịch vụ."
+        title={t('discovery.setup.title')}
+        message={t('discovery.setup.message')}
         actions={[
           {
-            label: 'Thiết lập ngay',
+            label: t('discovery.setup.now'),
             onPress: () => {
               setBannerVisible(false);
               router.push('/(details)/profile/edit');
             },
           },
-          { label: 'Để sau', onPress: () => setBannerVisible(false) },
+          {
+            label: t('discovery.setup.later'),
+            onPress: () => setBannerVisible(false),
+          },
         ]}
       />
-      <View style={styles.header}>
-        <Text accessibilityRole="header" style={styles.title}>
-          {role === 'CUSTOMER' ? 'Khám phá' : 'Yêu cầu'}
-        </Text>
-        {activeView === 'feed' ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={
-              activeFilterCount
-                ? `Bộ lọc, đang áp dụng ${activeFilterCount} tùy chọn`
-                : 'Bộ lọc'
-            }
-            hitSlop={8}
-            style={({ pressed }) => [
-              styles.filterButton,
-              pressed && styles.pressed,
-            ]}
-            onPress={() => setFilterVisible(true)}
-          >
-            <SymbolView
-              name={{
-                ios: 'slider.horizontal.3',
-                android: 'tune',
-                web: 'tune',
-              }}
-              size={24}
-              tintColor={colors.light.text}
-            />
-            {activeFilterCount ? (
-              <View style={styles.filterBadge}>
-                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-              </View>
-            ) : null}
-          </Pressable>
-        ) : null}
-      </View>
-      <View accessibilityRole="tablist" style={styles.tabs}>
-        {role === 'CUSTOMER' ? (
-          <TabButton
-            label="Khám phá"
-            selected={activeView === 'feed'}
-            onPress={() => setView('feed')}
-          />
-        ) : (
-          <TabButton
-            label="Yêu cầu"
-            selected={activeView === 'interests'}
-            onPress={() => setView('interests')}
-          />
-        )}
-        <TabButton
-          label="Kết nối"
-          selected={activeView === 'matches'}
-          onPress={() => setView('matches')}
-        />
-      </View>
-
       {activeView === 'feed' ? (
-        <View style={styles.feed}>
-          {swipeError ? (
-            <Text accessibilityRole="alert" style={styles.error}>
-              {relationshipErrorMessage(swipeError) ??
-                getUserErrorMessage(swipeError)}
-            </Text>
-          ) : null}
-          {candidates.isPending ? (
-            <LoadingState label="Đang tìm Photographer phù hợp…" />
-          ) : candidates.isError ? (
-            <ErrorState
-              title="Không thể tải Khám phá"
-              primaryActionLabel="Thử lại"
-              onPrimaryAction={() => void candidates.refetch()}
-            />
-          ) : current ? (
-            <DiscoveryCard
-              candidate={current}
-              scope={scope}
-              pending={swipePending}
-              onAction={handleSwipe}
-              onOpenProfile={() =>
-                router.push({
-                  pathname: '/(details)/profile/[id]',
-                  params: { id: current.userRoleId },
-                })
-              }
-            />
-          ) : candidates.isFetchingNextPage ? (
-            <LoadingState label="Đang tải thêm hồ sơ…" />
-          ) : (
-            <EmptyState
-              title="Bạn đã xem hết hồ sơ phù hợp"
-              message="Hãy quay lại sau hoặc thay đổi bộ lọc. Các hồ sơ đã bỏ qua không được phát lại sớm ở phía client."
-            />
-          )}
+        <View style={styles.immersiveFeed}>
+          <View
+            pointerEvents="none"
+            style={[styles.ambientGlow, styles.ambientGlowPrimary]}
+          />
+          <View
+            pointerEvents="none"
+            style={[styles.ambientGlow, styles.ambientGlowSecondary]}
+          />
+          <LinearGradient
+            pointerEvents="none"
+            colors={[
+              'rgba(2, 6, 23, 0.58)',
+              'rgba(2, 6, 23, 0.24)',
+              'rgba(2, 6, 23, 0)',
+            ]}
+            locations={[0, 0.52, 1]}
+            style={styles.headerScrim}
+          />
+          <DiscoveryHeader
+            activeFilterCount={activeFilterCount}
+            activeTab="feed"
+            onOpenFilters={() => setFilterVisible(true)}
+            onSelectTab={(tab) => setView(tab === 'feed' ? 'feed' : 'matches')}
+          />
+
+          <View style={styles.feed}>
+            {swipeError ? (
+              <Text accessibilityRole="alert" style={styles.errorOverlay}>
+                {relationshipErrorMessage(swipeError, locale) ??
+                  getUserErrorMessage(swipeError, locale)}
+              </Text>
+            ) : null}
+            {candidates.isPending ? (
+              <DiscoveryCardSkeleton />
+            ) : candidates.isError ? (
+              <DiscoveryErrorState onRetry={() => void candidates.refetch()} />
+            ) : current ? (
+              <DiscoveryCardStack
+                candidates={visibleCandidates.slice(0, 3)}
+                scope={scope}
+                pending={swipePending}
+                onAction={handleSwipe}
+                onOpenProfile={() =>
+                  router.push({
+                    pathname: '/(details)/profile/[id]',
+                    params: { id: current.userRoleId },
+                  })
+                }
+              />
+            ) : candidates.isFetchingNextPage ? (
+              <DiscoveryCardSkeleton />
+            ) : (
+              <DiscoveryEmptyState
+                onAdjustFilters={() => setFilterVisible(true)}
+                onRetry={() => void candidates.refetch()}
+              />
+            )}
+          </View>
         </View>
-      ) : activeView === 'interests' ? (
-        <IncomingInterests
-          scope={scope}
-          onFeedback={(message) => setFeedback({ message })}
-        />
+      ) : activeView === 'matches' ? (
+        <View style={styles.connectionView}>
+          <LinearGradient
+            pointerEvents="none"
+            colors={[
+              'rgba(2, 6, 23, 0.84)',
+              'rgba(2, 6, 23, 0.32)',
+              'rgba(2, 6, 23, 0)',
+            ]}
+            locations={[0, 0.58, 1]}
+            style={styles.connectionScrim}
+          />
+          <DiscoveryHeader
+            activeFilterCount={activeFilterCount}
+            activeTab="matches"
+            onOpenFilters={() => setFilterVisible(true)}
+            onSelectTab={(tab) => setView(tab === 'feed' ? 'feed' : 'matches')}
+          />
+          <View style={styles.connectionBody}>
+            <MatchList dark scope={scope} />
+          </View>
+        </View>
       ) : (
-        <MatchList scope={scope} />
+        <>
+          <View style={styles.header}>
+            <Text accessibilityRole="header" style={styles.title}>
+              {role === 'CUSTOMER'
+                ? t('discovery.tab.feed')
+                : t('discovery.tab.interests')}
+            </Text>
+          </View>
+          <View accessibilityRole="tablist" style={styles.tabs}>
+            {role === 'CUSTOMER' ? (
+              <TabButton
+                label={t('discovery.tab.feed')}
+                selected={false}
+                onPress={() => setView('feed')}
+              />
+            ) : (
+              <TabButton
+                label={t('discovery.tab.interests')}
+                selected={activeView === 'interests'}
+                onPress={() => setView('interests')}
+              />
+            )}
+            <TabButton
+              label={t('discovery.tab.matches')}
+              selected={false}
+              onPress={() => setView('matches')}
+            />
+          </View>
+
+          {activeView === 'interests' ? (
+            <IncomingInterests
+              scope={scope}
+              onFeedback={(message) => setFeedback({ message })}
+            />
+          ) : (
+            <MatchList scope={scope} />
+          )}
+        </>
       )}
 
       {filterVisible ? (
@@ -387,34 +443,62 @@ const styles = StyleSheet.create({
     fontSize: 30,
     letterSpacing: -0.8,
   },
-  filterButton: {
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.light.border,
-    borderRadius: radius.full,
-    backgroundColor: colors.light.surface,
+  immersiveContent: {
+    padding: 0,
+    gap: 0,
+    backgroundColor: colors.dark.background,
   },
-  filterBadge: {
+  immersiveSafe: {
+    backgroundColor: colors.dark.background,
+  },
+  immersiveFeed: {
+    flex: 1,
+    minHeight: 0,
+    overflow: 'hidden',
+    backgroundColor: colors.dark.background,
+  },
+  connectionView: {
+    minHeight: '100%',
+    position: 'relative',
+    paddingTop: 72,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+    backgroundColor: colors.dark.background,
+  },
+  connectionScrim: {
     position: 'absolute',
-    top: -2,
-    right: -2,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xs,
-    borderWidth: 2,
-    borderColor: colors.light.background,
-    borderRadius: radius.full,
+    top: 0,
+    right: 0,
+    left: 0,
+    height: 180,
+  },
+  connectionBody: {
+    flexGrow: 1,
+  },
+  ambientGlow: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    opacity: 0.12,
+  },
+  ambientGlowPrimary: {
+    top: '26%',
+    left: -120,
     backgroundColor: colors.brand,
   },
-  filterBadgeText: {
-    color: colors.light.surface,
-    fontFamily: typography.bold,
-    fontSize: 10,
+  ambientGlowSecondary: {
+    right: -120,
+    bottom: '22%',
+    backgroundColor: colors.purple,
+  },
+  headerScrim: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    left: 0,
+    height: 148,
+    zIndex: 4,
   },
   tabs: {
     flexDirection: 'row',
@@ -445,6 +529,18 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 0,
   },
-  error: { color: colors.danger },
+  errorOverlay: {
+    position: 'absolute',
+    top: 112,
+    right: spacing.lg,
+    left: spacing.lg,
+    zIndex: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(127, 29, 29, 0.84)',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
   pressed: { opacity: 0.72 },
 });

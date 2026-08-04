@@ -1,5 +1,7 @@
-import { useState } from 'react';
 import { SymbolView } from 'expo-symbols';
+import { StatusBar } from 'expo-status-bar';
+import { Slider } from '@expo/ui/community/slider';
+import { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -7,26 +9,32 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
-import { Button, MultiSelect, PriceRangeField, Select } from '@/components/ui';
+import { Button } from '@/components/ui';
 import type { CatalogItemResponse } from '@/generated/api/types.gen';
+import { useI18n } from '@/i18n/i18n-provider';
+import { useOptionalTheme } from '@/providers/theme-provider';
 import { colors, radius, spacing, typography } from '@/theme';
 
+import {
+  FilterChip,
+  FilterSection,
+  FilterSwitch,
+  formatBudgetSummary,
+  PriceRangeInputs,
+} from './discovery-filter-controls';
 import {
   defaultDiscoveryFilters,
   discoveryFiltersSchema,
   type DiscoveryFilters,
 } from './discovery.types';
-
-const radiusOptions = [5, 10, 20, 30, 50, 100].map((value) => ({
-  value: String(value),
-  label: `${value} km`,
-}));
 
 export function DiscoveryFilterSheet({
   filters,
@@ -39,6 +47,10 @@ export function DiscoveryFilterSheet({
   onApply: (filters: DiscoveryFilters) => Promise<void> | void;
   onClose: () => void;
 }) {
+  const { locale, t } = useI18n();
+  const theme = useOptionalTheme();
+  const insets = useSafeAreaInsets();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
   const [draft, setDraft] = useState(filters);
   const [minPrice, setMinPrice] = useState(
     filters.minPrice === undefined ? '' : String(filters.minPrice),
@@ -48,6 +60,23 @@ export function DiscoveryFilterSheet({
   );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const serviceOptions = useMemo(
+    () =>
+      services.map((service) => ({
+        value: service.id,
+        label: service.name,
+      })),
+    [services],
+  );
+
+  const hasDraftChanges =
+    draft.serviceIds.length > 0 ||
+    Boolean(minPrice) ||
+    Boolean(maxPrice) ||
+    draft.nearbyOnly ||
+    draft.radiusKm !== defaultDiscoveryFilters.radiusKm ||
+    draft.availableOnly ||
+    draft.verifiedOnly;
 
   const resetDraft = () => {
     setDraft(defaultDiscoveryFilters);
@@ -63,7 +92,7 @@ export function DiscoveryFilterSheet({
       ...(maxPrice ? { maxPrice: Number(maxPrice) } : { maxPrice: undefined }),
     });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Bộ lọc chưa hợp lệ');
+      setError(t('discovery.filters.invalid'));
       return;
     }
     try {
@@ -74,7 +103,7 @@ export function DiscoveryFilterSheet({
       setError(
         caught instanceof Error
           ? caught.message
-          : 'Không thể áp dụng bộ lọc lúc này',
+          : t('discovery.filters.applyFailed'),
       );
     } finally {
       setSubmitting(false);
@@ -89,71 +118,122 @@ export function DiscoveryFilterSheet({
       accessibilityViewIsModal
       onRequestClose={onClose}
     >
-      <SafeAreaView style={styles.safe}>
+      <StatusBar style={theme?.resolved === 'dark' ? 'light' : 'dark'} />
+      <SafeAreaView
+        edges={['top', 'left', 'right']}
+        style={[styles.safe, { backgroundColor: palette.background }]}
+      >
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <View style={styles.header}>
+          <View
+            style={[
+              styles.header,
+              {
+                borderBottomColor: palette.border,
+                backgroundColor: palette.surface,
+              },
+            ]}
+          >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Đặt lại bộ lọc"
+              accessibilityLabel={t('discovery.filters.close')}
               disabled={submitting}
-              hitSlop={8}
-              style={styles.headerAction}
-              onPress={resetDraft}
-            >
-              <Text style={styles.resetLabel}>Đặt lại</Text>
-            </Pressable>
-            <Text accessibilityRole="header" style={styles.title}>
-              Tùy chọn khám phá
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Đóng bộ lọc Khám phá"
-              disabled={submitting}
-              hitSlop={8}
-              style={styles.closeButton}
+              style={({ pressed }) => [
+                styles.headerAction,
+                pressed && styles.pressed,
+              ]}
               onPress={onClose}
             >
               <SymbolView
                 name={{ ios: 'xmark', android: 'close', web: 'close' }}
                 size={21}
-                tintColor={colors.light.text}
+                tintColor={palette.text}
               />
+            </Pressable>
+            <Text
+              accessibilityRole="header"
+              pointerEvents="none"
+              style={[styles.title, { color: palette.text }]}
+            >
+              {t('discovery.filters.title')}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('discovery.filters.reset')}
+              accessibilityState={{ disabled: !hasDraftChanges || submitting }}
+              disabled={!hasDraftChanges || submitting}
+              style={({ pressed }) => [
+                styles.resetAction,
+                pressed && styles.pressed,
+                (!hasDraftChanges || submitting) && styles.disabled,
+              ]}
+              onPress={resetDraft}
+            >
+              <Text style={styles.resetLabel}>
+                {t('discovery.filters.resetLabel')}
+              </Text>
             </Pressable>
           </View>
 
           <ScrollView
+            style={styles.scroll}
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
             <FilterSection
-              title="Bạn muốn tìm dịch vụ nào?"
-              helper="Chọn một hoặc nhiều dịch vụ phù hợp với nhu cầu của bạn."
+              palette={palette}
+              title={t('discovery.filters.services')}
+              value={
+                draft.serviceIds.length > 0
+                  ? t('discovery.filters.servicesSelected', {
+                      count: draft.serviceIds.length,
+                    })
+                  : t('discovery.filters.all')
+              }
+              helper={t('discovery.filters.servicesHelper')}
             >
-              <MultiSelect
-                label="Dịch vụ"
-                options={services.map((service) => ({
-                  value: service.id,
-                  label: service.name,
-                }))}
-                values={draft.serviceIds}
-                onChange={(serviceIds) =>
-                  setDraft({ ...draft, serviceIds: serviceIds as string[] })
-                }
-              />
+              <View style={styles.chipWrap}>
+                {serviceOptions.map((service) => (
+                  <FilterChip
+                    key={service.value}
+                    label={service.label}
+                    selected={draft.serviceIds.includes(service.value)}
+                    palette={palette}
+                    multiple
+                    variant="service"
+                    onPress={() =>
+                      setDraft((current) => ({
+                        ...current,
+                        serviceIds: current.serviceIds.includes(service.value)
+                          ? current.serviceIds.filter(
+                              (value) => value !== service.value,
+                            )
+                          : [...current.serviceIds, service.value],
+                      }))
+                    }
+                  />
+                ))}
+              </View>
+              {!serviceOptions.length ? (
+                <Text style={[styles.emptyText, { color: palette.muted }]}>
+                  {t('discovery.filters.servicesUnavailable')}
+                </Text>
+              ) : null}
             </FilterSection>
 
             <FilterSection
-              title="Khoảng giá"
-              helper="Mức giá dự kiến cho dịch vụ, tính bằng VND."
+              palette={palette}
+              title={t('discovery.filters.budget')}
+              value={formatBudgetSummary(minPrice, maxPrice, locale)}
+              helper={t('discovery.filters.budgetHelper')}
             >
-              <PriceRangeField
-                currency="VND"
+              <PriceRangeInputs
                 min={minPrice}
                 max={maxPrice}
+                palette={palette}
                 onChange={(value) => {
                   setMinPrice(value.min ?? '');
                   setMaxPrice(value.max ?? '');
@@ -162,76 +242,149 @@ export function DiscoveryFilterSheet({
             </FilterSection>
 
             <FilterSection
-              title="Khoảng cách"
-              helper="Vị trí chỉ được dùng khi bạn chủ động bật Gần tôi."
+              palette={palette}
+              title={t('discovery.filters.distance')}
+              value={
+                draft.nearbyOnly
+                  ? t('discovery.filters.radiusUnit', {
+                      value: draft.radiusKm,
+                    })
+                  : t('discovery.filters.off')
+              }
+              helper={t('discovery.filters.distanceHelper')}
             >
               <FilterSwitch
-                label="Gần tôi"
-                description="Tìm Photographer trong bán kính đã chọn"
+                icon={{
+                  ios: 'location.fill',
+                  android: 'location_on',
+                  web: 'location_on',
+                }}
+                label={t('discovery.filters.nearby')}
+                description={t('discovery.filters.nearbyDescription')}
                 value={draft.nearbyOnly}
-                onChange={(nearbyOnly) => setDraft({ ...draft, nearbyOnly })}
+                palette={palette}
+                onChange={(nearbyOnly) =>
+                  setDraft((current) => ({ ...current, nearbyOnly }))
+                }
               />
               {draft.nearbyOnly ? (
                 <>
-                  <View style={styles.divider} />
-                  <Select
-                    label="Bán kính gần tôi"
-                    value={String(draft.radiusKm)}
-                    options={radiusOptions}
-                    onChange={(radiusKm) =>
-                      setDraft({ ...draft, radiusKm: Number(radiusKm) })
-                    }
+                  <View
+                    style={[
+                      styles.divider,
+                      { backgroundColor: palette.border },
+                    ]}
                   />
-                  <View style={styles.privacyNote}>
-                    <SymbolView
-                      name={{
-                        ios: 'lock.shield.fill',
-                        android: 'shield_lock',
-                        web: 'shield_lock',
-                      }}
-                      size={18}
-                      tintColor={colors.brand}
+                  <View style={styles.controlGroup}>
+                    <View style={styles.radiusHeader}>
+                      <Text
+                        style={[styles.controlLabel, { color: palette.text }]}
+                      >
+                        {t('discovery.filters.radius')}
+                      </Text>
+                      <Text
+                        style={[styles.radiusValue, { color: colors.brand }]}
+                      >
+                        {t('discovery.filters.radiusUnit', {
+                          value: draft.radiusKm,
+                        })}
+                      </Text>
+                    </View>
+                    <Slider
+                      minimumValue={1}
+                      maximumValue={100}
+                      step={1}
+                      value={draft.radiusKm}
+                      minimumTrackTintColor={colors.brand}
+                      maximumTrackTintColor={palette.border}
+                      thumbTintColor={colors.brand}
+                      style={styles.radiusSlider}
+                      onValueChange={(radiusKm) =>
+                        setDraft((current) => ({
+                          ...current,
+                          radiusKm: Math.round(radiusKm),
+                        }))
+                      }
                     />
-                    <Text style={styles.privacyText}>
-                      Người khác chỉ thấy khoảng cách gần đúng, không thấy tọa
-                      độ của bạn.
-                    </Text>
+                    <View style={styles.radiusScale}>
+                      <Text
+                        style={[styles.scaleLabel, { color: palette.muted }]}
+                      >
+                        {t('discovery.filters.radiusUnit', { value: 1 })}
+                      </Text>
+                      <Text
+                        style={[styles.scaleLabel, { color: palette.muted }]}
+                      >
+                        {t('discovery.filters.radiusUnit', { value: 100 })}
+                      </Text>
+                    </View>
                   </View>
                 </>
               ) : null}
             </FilterSection>
 
-            <FilterSection title="Ưu tiên hồ sơ">
+            <FilterSection
+              palette={palette}
+              title={t('discovery.filters.preferences')}
+              helper={t('discovery.filters.preferencesHelper')}
+            >
               <FilterSwitch
-                label="Đang sẵn sàng"
-                description="Chỉ hiển thị Photographer đang nhận lịch"
+                icon={{
+                  ios: 'bolt.fill',
+                  android: 'bolt',
+                  web: 'bolt',
+                }}
+                label={t('discovery.filters.available')}
+                description={t('discovery.filters.availableDescription')}
                 value={draft.availableOnly}
+                palette={palette}
                 onChange={(availableOnly) =>
-                  setDraft({ ...draft, availableOnly })
+                  setDraft((current) => ({ ...current, availableOnly }))
                 }
               />
-              <View style={styles.divider} />
+              <View
+                style={[styles.divider, { backgroundColor: palette.border }]}
+              />
               <FilterSwitch
-                label="Đã xác minh"
-                description="Chỉ hiển thị tài khoản đã được xác minh"
+                icon={{
+                  ios: 'checkmark.seal.fill',
+                  android: 'verified',
+                  web: 'verified',
+                }}
+                label={t('discovery.filters.verified')}
+                description={t('discovery.filters.verifiedDescription')}
                 value={draft.verifiedOnly}
+                palette={palette}
                 onChange={(verifiedOnly) =>
-                  setDraft({ ...draft, verifiedOnly })
+                  setDraft((current) => ({ ...current, verifiedOnly }))
                 }
               />
             </FilterSection>
 
             {error ? (
-              <Text accessibilityRole="alert" style={styles.error}>
+              <Text
+                accessibilityRole="alert"
+                style={[styles.error, { color: palette.error }]}
+              >
                 {error}
               </Text>
             ) : null}
           </ScrollView>
 
-          <View style={styles.footer}>
+          <View
+            style={[
+              styles.footer,
+              {
+                paddingBottom: Math.max(insets.bottom, spacing.lg),
+                borderTopColor: palette.border,
+                backgroundColor: palette.surface,
+              },
+            ]}
+          >
             <Button
-              label="Áp dụng"
+              label={t('discovery.filters.apply')}
               loading={submitting}
+              style={styles.applyButton}
               onPress={() => void submit()}
             />
           </View>
@@ -241,147 +394,83 @@ export function DiscoveryFilterSheet({
   );
 }
 
-function FilterSection({
-  title,
-  helper,
-  children,
-}: {
-  title: string;
-  helper?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      {helper ? <Text style={styles.sectionHelper}>{helper}</Text> : null}
-      <View style={styles.sectionBody}>{children}</View>
-    </View>
-  );
-}
-
-function FilterSwitch({
-  label,
-  description,
-  value,
-  onChange,
-}: {
-  label: string;
-  description?: string;
-  value: boolean;
-  onChange: (value: boolean) => void;
-}) {
-  return (
-    <View style={styles.switchRow}>
-      <View style={styles.switchCopy}>
-        <Text style={styles.switchLabel}>{label}</Text>
-        {description ? (
-          <Text style={styles.switchDescription}>{description}</Text>
-        ) : null}
-      </View>
-      <Switch
-        accessibilityLabel={label}
-        trackColor={{
-          false: colors.light.border,
-          true: colors.brand,
-        }}
-        thumbColor={colors.light.surface}
-        value={value}
-        onValueChange={onChange}
-      />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.light.background,
-  },
+  safe: { flex: 1 },
   flex: { flex: 1 },
+  scroll: { flex: 1 },
   header: {
-    minHeight: 60,
+    height: 56,
+    position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.light.border,
-    backgroundColor: colors.light.surface,
   },
   headerAction: {
-    minWidth: 64,
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  resetLabel: {
-    color: colors.brand,
-    fontFamily: typography.semibold,
-    fontSize: 14,
-  },
-  closeButton: {
     width: 44,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.full,
   },
-  content: {
-    gap: spacing.xl,
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl,
+  resetAction: {
+    minWidth: 72,
+    height: 44,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
   },
   title: {
-    flex: 1,
-    color: colors.light.text,
+    position: 'absolute',
+    right: 72,
+    left: 72,
     fontFamily: typography.bold,
     fontSize: 18,
     textAlign: 'center',
   },
-  section: {
+  resetLabel: {
+    color: colors.brand,
+    fontFamily: typography.semibold,
+    fontSize: 14,
+  },
+  content: {
+    gap: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xl,
+  },
+  chipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  sectionTitle: {
-    color: colors.light.text,
-    fontFamily: typography.bold,
-    fontSize: 18,
-  },
-  sectionHelper: {
-    color: colors.light.muted,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  sectionBody: {
-    overflow: 'hidden',
-    gap: spacing.md,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.light.border,
-    borderRadius: radius.lg,
-    backgroundColor: colors.light.surface,
-  },
-  switchRow: {
-    minHeight: 52,
+  controlGroup: { gap: spacing.sm },
+  radiusHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.md,
   },
-  switchCopy: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  switchLabel: {
-    color: colors.light.text,
+  controlLabel: {
     fontFamily: typography.semibold,
+    fontSize: 14,
   },
-  switchDescription: {
-    color: colors.light.muted,
+  radiusValue: {
+    fontFamily: typography.bold,
+    fontSize: 14,
+  },
+  radiusSlider: {
+    width: '100%',
+    height: 36,
+  },
+  radiusScale: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  scaleLabel: {
     fontSize: 12,
-    lineHeight: 18,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.light.border,
   },
   privacyNote: {
     flexDirection: 'row',
@@ -389,19 +478,28 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.md,
     borderRadius: radius.md,
-    backgroundColor: colors.light.infoContainer,
   },
   privacyText: {
     flex: 1,
-    color: colors.light.info,
     fontSize: 12,
     lineHeight: 18,
   },
-  error: { color: colors.danger },
-  footer: {
-    padding: spacing.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.light.border,
-    backgroundColor: colors.light.surface,
+  emptyText: { fontSize: 13, lineHeight: 19 },
+  error: {
+    fontSize: 13,
+    lineHeight: 19,
   },
+  footer: {
+    gap: spacing.md,
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  applyButton: {
+    width: '100%',
+    minHeight: 56,
+    borderRadius: radius.full,
+  },
+  pressed: { opacity: 0.74 },
+  disabled: { opacity: 0.45 },
 });

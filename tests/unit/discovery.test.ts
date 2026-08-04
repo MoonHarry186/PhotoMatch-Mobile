@@ -110,6 +110,12 @@ describe('Discovery relationship rules', () => {
     expect(locationPermissionMessage('services-disabled')).toContain(
       'đang tắt',
     );
+    expect(locationPermissionMessage('denied', 'en')).toContain(
+      'Location access is required',
+    );
+    expect(
+      relationshipErrorMessage({ businessCode: 'RELATIONSHIP_BLOCKED' }, 'en'),
+    ).toContain('relationship is blocked');
   });
 
   it('deduplicates a REST result and accept-event race by match id', () => {

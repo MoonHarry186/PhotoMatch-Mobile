@@ -5,11 +5,14 @@ import {
   ScrollView,
   StyleSheet,
   View,
+  type StyleProp,
   type ScrollViewProps,
+  type ViewStyle,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
-import { spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
+import { useOptionalTheme } from '@/providers/theme-provider';
 
 type Props = {
   children: ReactNode;
@@ -17,6 +20,9 @@ type Props = {
   footer?: ReactNode;
   scroll?: boolean;
   scrollProps?: ScrollViewProps;
+  contentStyle?: StyleProp<ViewStyle>;
+  safeStyle?: StyleProp<ViewStyle>;
+  safeEdges?: Edge[];
   testID?: string;
 };
 
@@ -26,11 +32,16 @@ export function AppScreen({
   footer,
   scroll = true,
   scrollProps,
+  contentStyle,
+  safeStyle,
+  safeEdges,
   testID,
 }: Props) {
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
   const content = scroll ? (
     <ScrollView
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, contentStyle]}
       keyboardShouldPersistTaps="handled"
       automaticallyAdjustKeyboardInsets
       {...scrollProps}
@@ -38,10 +49,14 @@ export function AppScreen({
       {children}
     </ScrollView>
   ) : (
-    <View style={styles.content}>{children}</View>
+    <View style={[styles.content, contentStyle]}>{children}</View>
   );
   return (
-    <SafeAreaView style={styles.safe} testID={testID}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: palette.background }, safeStyle]}
+      edges={safeEdges}
+      testID={testID}
+    >
       {header}
       <KeyboardAvoidingView
         testID="app-screen-keyboard-avoiding"
