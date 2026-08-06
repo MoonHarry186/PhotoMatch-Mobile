@@ -10,6 +10,7 @@ import { Button, TextField } from '@/components/ui';
 import { AppError, getUserErrorMessage } from '@/core/errors';
 import { colors, spacing, typography } from '@/theme';
 import { useSession } from '@/providers/session-provider';
+import { useOptionalTheme } from '@/providers/theme-provider';
 import { useI18n } from '@/i18n/i18n-provider';
 
 import { authApi } from './auth.api';
@@ -29,6 +30,8 @@ export function SignInScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ email?: string; notice?: string }>();
   const { locale, t } = useI18n();
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
   const schema = useMemo(() => createSignInSchema(t), [t]);
   const {
     control,
@@ -94,7 +97,10 @@ export function SignInScreen() {
         subtitle={t('auth.signInSubtitle')}
       />
       {params.notice === 'password-reset-success' ? (
-        <Text accessibilityRole="alert" style={styles.success}>
+        <Text
+          accessibilityRole="alert"
+          style={[styles.success, { color: palette.success }]}
+        >
           {t('auth.passwordResetSuccess')}
         </Text>
       ) : null}
@@ -149,7 +155,10 @@ export function SignInScreen() {
         )}
       />
       {errors.root?.message ? (
-        <Text accessibilityRole="alert" style={styles.error}>
+        <Text
+          accessibilityRole="alert"
+          style={[styles.error, { color: palette.error }]}
+        >
           {errors.root.message}
         </Text>
       ) : null}
@@ -159,7 +168,9 @@ export function SignInScreen() {
         onPress={() => void submit()}
       />
       <View style={styles.createAccountRow}>
-        <Text style={styles.createAccountPrompt}>{t('auth.noAccount')}</Text>
+        <Text style={[styles.createAccountPrompt, { color: palette.text }]}>
+          {t('auth.noAccount')}
+        </Text>
         <Link href="/(auth)/sign-up" asChild>
           <Pressable
             hitSlop={8}
@@ -171,9 +182,15 @@ export function SignInScreen() {
         </Link>
       </View>
       <View accessibilityRole="text" style={styles.divider}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>{t('common.or')}</Text>
-        <View style={styles.dividerLine} />
+        <View
+          style={[styles.dividerLine, { backgroundColor: palette.border }]}
+        />
+        <Text style={[styles.dividerText, { color: palette.muted }]}>
+          {t('common.or')}
+        </Text>
+        <View
+          style={[styles.dividerLine, { backgroundColor: palette.border }]}
+        />
       </View>
       <OAuthButtons />
       <LegalConsentNotice action="sign-in" />
@@ -182,8 +199,8 @@ export function SignInScreen() {
 }
 
 const styles = StyleSheet.create({
-  error: { color: '#B91C1C', textAlign: 'center' },
-  success: { color: '#15803D', textAlign: 'center' },
+  error: { textAlign: 'center' },
+  success: { textAlign: 'center' },
   forgotPassword: {
     color: colors.link,
     fontFamily: typography.semibold,
@@ -198,7 +215,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   createAccountPrompt: {
-    color: colors.light.text,
     fontFamily: typography.regular,
     fontSize: 14,
   },
@@ -216,10 +232,8 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.light.border,
   },
   dividerText: {
-    color: colors.light.muted,
     fontFamily: typography.medium,
     fontSize: 14,
   },

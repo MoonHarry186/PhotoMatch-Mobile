@@ -18,6 +18,7 @@ import {
 } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui';
+import { getUserErrorMessage, normalizeError } from '@/core/errors';
 import type { CatalogItemResponse } from '@/generated/api/types.gen';
 import { useI18n } from '@/i18n/i18n-provider';
 import { useOptionalTheme } from '@/providers/theme-provider';
@@ -102,7 +103,7 @@ export function DiscoveryFilterSheet({
     } catch (caught) {
       setError(
         caught instanceof Error
-          ? caught.message
+          ? getUserErrorMessage(normalizeError(caught), locale)
           : t('discovery.filters.applyFailed'),
       );
     } finally {

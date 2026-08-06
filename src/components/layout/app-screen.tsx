@@ -49,7 +49,9 @@ export function AppScreen({
       {children}
     </ScrollView>
   ) : (
-    <View style={[styles.content, contentStyle]}>{children}</View>
+    <View style={[styles.content, styles.nonScrollContent, contentStyle]}>
+      {children}
+    </View>
   );
   return (
     <SafeAreaView
@@ -71,7 +73,8 @@ export function AppScreen({
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F8FAFC' },
+  safe: { flex: 1 },
   flex: { flex: 1 },
+  nonScrollContent: { flex: 1, minHeight: 0 },
   content: { flexGrow: 1, padding: spacing.lg, gap: spacing.lg },
 });

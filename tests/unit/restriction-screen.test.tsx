@@ -1,6 +1,8 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import RestrictionRoute from '@/app/(public)/restriction';
+import { I18nProvider } from '@/i18n/i18n-provider';
+import { ThemeProvider } from '@/providers/theme-provider';
 
 const mockReplace = jest.fn();
 const mockSignOut = jest.fn();
@@ -28,7 +30,13 @@ describe('RestrictionRoute before authentication', () => {
   });
 
   it('shows the dedicated suspension state and returns to sign-in', async () => {
-    const view = await render(<RestrictionRoute />);
+    const view = await render(
+      <I18nProvider initialLocale="vi">
+        <ThemeProvider>
+          <RestrictionRoute />
+        </ThemeProvider>
+      </I18nProvider>,
+    );
 
     expect(
       view.getByTestId('restriction-content').props.contentContainerStyle,

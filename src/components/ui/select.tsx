@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useOptionalTheme } from '@/providers/theme-provider';
 import { colors, radius, spacing, typography } from '@/theme';
 
 export type SelectOption = { value: string; label: string };
@@ -23,6 +24,8 @@ export function Select({
   onChange,
   error,
 }: Props) {
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
   const selected = multiple ? values : value ? [value] : [];
   const toggle = (next: string) => {
     if (!multiple) return onChange(next);
@@ -34,7 +37,7 @@ export function Select({
   };
   return (
     <View accessibilityRole="radiogroup" style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: palette.text }]}>{label}</Text>
       <View style={styles.options}>
         {options.map((option) => {
           const active = selected.includes(option.value);
@@ -44,14 +47,24 @@ export function Select({
               accessibilityRole={multiple ? 'checkbox' : 'radio'}
               accessibilityState={{ checked: active }}
               onPress={() => toggle(option.value)}
-              style={[styles.option, active && styles.active]}
+              style={[
+                styles.option,
+                { borderColor: palette.border },
+                active && styles.active,
+              ]}
             >
-              <Text style={active && styles.activeText}>{option.label}</Text>
+              <Text
+                style={[{ color: palette.text }, active && styles.activeText]}
+              >
+                {option.label}
+              </Text>
             </Pressable>
           );
         })}
       </View>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? (
+        <Text style={[styles.error, { color: palette.error }]}>{error}</Text>
+      ) : null}
     </View>
   );
 }
@@ -68,11 +81,10 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.light.border,
     borderRadius: radius.full,
     paddingHorizontal: spacing.md,
   },
   active: { backgroundColor: colors.brand, borderColor: colors.brand },
-  activeText: { color: '#FFFFFF' },
-  error: { color: colors.danger },
+  activeText: { color: colors.onBrand },
+  error: {},
 });

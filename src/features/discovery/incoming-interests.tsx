@@ -12,6 +12,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/feedback';
 import { Button, ConfirmDialog } from '@/components/ui';
 import { getUserErrorMessage, normalizeError } from '@/core/errors';
 import { useI18n } from '@/i18n/i18n-provider';
+import { useOptionalTheme } from '@/providers/theme-provider';
 import { createSubmissionKey } from '@/services/api/idempotency';
 import { queryKeys } from '@/services/api/query-keys';
 import { colors, elevation, radius, spacing, typography } from '@/theme';
@@ -174,23 +175,27 @@ function InterestCard({
   onReject: () => void;
 }) {
   const { locale, t } = useI18n();
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
   const name = interest.customer.displayName || t('discovery.default.customer');
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: palette.surface }]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t('discovery.interests.openProfile', { name })}
         onPress={onOpenProfile}
         style={styles.summary}
       >
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
+        <View
+          style={[styles.avatar, { backgroundColor: palette.infoContainer }]}
+        >
+          <Text style={[styles.avatarText, { color: palette.info }]}>
             {name.slice(0, 1).toUpperCase()}
           </Text>
         </View>
         <View style={styles.flex}>
-          <Text style={styles.name}>{name}</Text>
-          <Text style={styles.meta}>
+          <Text style={[styles.name, { color: palette.text }]}>{name}</Text>
+          <Text style={[styles.meta, { color: palette.muted }]}>
             {interest.customer.city ?? t('discovery.interests.cityUnknown')} ·{' '}
             {new Date(interest.createdAt).toLocaleDateString(
               locale === 'vi' ? 'vi-VN' : 'en-US',
@@ -278,7 +283,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg,
     borderRadius: radius.lg,
-    backgroundColor: colors.light.surface,
     ...elevation.card,
   },
   summary: {
@@ -293,20 +297,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 28,
-    backgroundColor: colors.light.infoContainer,
   },
   avatarText: {
-    color: colors.brand,
     fontFamily: typography.bold,
     fontSize: 22,
   },
   flex: { flex: 1, gap: spacing.xs },
   name: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 18,
   },
-  meta: { color: colors.light.muted },
+  meta: {},
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   actions: { flexDirection: 'row', gap: spacing.md },
   error: { color: colors.danger },

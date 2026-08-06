@@ -7,17 +7,12 @@ import {
 } from 'react-native';
 
 import { useOptionalTheme } from '@/providers/theme-provider';
+import { useOptionalI18n } from '@/i18n/i18n-provider';
+import type { MessageKey } from '@/i18n/messages';
 import { colors, radius, spacing, typography } from '@/theme';
 
 export type MessageStatus =
   'sending' | 'sent' | 'delivered' | 'read' | 'failed';
-
-const statusLabels: Record<Exclude<MessageStatus, 'failed'>, string> = {
-  sending: 'Đang gửi…',
-  sent: 'Đã gửi',
-  delivered: 'Đã nhận',
-  read: 'Đã xem',
-};
 
 export function MessageBubble({
   content,
@@ -31,6 +26,8 @@ export function MessageBubble({
   onRetry?: () => void;
 }) {
   const theme = useOptionalTheme();
+  const i18n = useOptionalI18n();
+  const t = i18n?.t ?? ((key: MessageKey) => key);
   const systemTheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const palette =
     (theme?.resolved ?? systemTheme) === 'dark' ? colors.dark : colors.light;
@@ -42,17 +39,24 @@ export function MessageBubble({
       {status === 'failed' ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Tin nhắn chưa gửi được. Nhấn để thử lại."
+          accessibilityLabel={t('messaging.failedA11y')}
           style={styles.meta}
           onPress={onRetry}
         >
           <Text style={[styles.failed, { color: palette.error }]}>
-            {time} · ⚠ Chưa gửi được · Nhấn để thử lại
+            {time} · ⚠ {t('messaging.failedRetry')}
           </Text>
         </Pressable>
       ) : (
         <Text style={[styles.status, { color: palette.muted }]}>
-          {time} · {statusLabels[status]}
+          {time} ·{' '}
+          {t(
+            `messaging.${status}` as
+              | 'messaging.sending'
+              | 'messaging.sent'
+              | 'messaging.delivered'
+              | 'messaging.read',
+          )}
         </Text>
       )}
     </View>

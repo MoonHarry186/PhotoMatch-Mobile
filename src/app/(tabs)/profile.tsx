@@ -10,12 +10,13 @@ import { ErrorState, LoadingState } from '@/components/feedback';
 import { AppScreen } from '@/components/layout/app-screen';
 import { onboardingApi } from '@/features/onboarding/onboarding.api';
 import {
-  discoveryReasonLabels,
-  missingLabels,
+  discoveryReasonLabelKeys,
+  missingLabelKeys,
   portfolioWarning,
 } from '@/features/onboarding/onboarding.model';
 import { RoleSwitcher } from '@/features/profile/role-switcher';
 import { useAppSnackbar } from '@/hooks/use-app-snackbar';
+import { useI18n } from '@/i18n/i18n-provider';
 import { useOptionalTheme } from '@/providers/theme-provider';
 import { useSession } from '@/providers/session-provider';
 import { queryKeys } from '@/services/api/query-keys';
@@ -26,6 +27,7 @@ type IconName = ComponentProps<typeof SymbolView>['name'];
 
 export default function ProfileRoute() {
   const session = useSession();
+  const { t } = useI18n();
   const router = useRouter();
   const theme = useOptionalTheme();
   const { showSnackbar } = useAppSnackbar();
@@ -79,19 +81,19 @@ export default function ProfileRoute() {
   useEffect(() => {
     if (!isRefetchError) return;
     showSnackbar({
-      message: 'Không thể cập nhật hồ sơ. Dữ liệu gần nhất vẫn được giữ.',
-      actionLabel: 'Thử lại',
+      message: t('common.genericError'),
+      actionLabel: t('common.retry'),
       onAction: () => void refetch(),
     });
-  }, [errorUpdatedAt, isRefetchError, refetch, showSnackbar]);
+  }, [errorUpdatedAt, isRefetchError, refetch, showSnackbar, t]);
 
   if (!user || profile.isPending || progress.isPending)
-    return <LoadingState label="Đang tải hồ sơ…" />;
+    return <LoadingState label={t('profile.loading')} />;
   if ((profile.isError && !profile.data) || !progress.data) {
     return (
       <ErrorState
-        title="Không thể tải hồ sơ"
-        primaryActionLabel="Thử lại"
+        title={t('profile.loadError')}
+        primaryActionLabel={t('common.retry')}
         onPrimaryAction={() => {
           void profile.refetch();
           void progress.refetch();
@@ -100,15 +102,16 @@ export default function ProfileRoute() {
     );
   }
 
-  const displayName = profile.data.displayName ?? 'Hồ sơ của tôi';
-  const roleLabel = role === 'PHOTOGRAPHER' ? 'Photographer' : 'Khách hàng';
+  const displayName = profile.data.displayName ?? t('profile.profileLabel');
+  const roleLabel =
+    role === 'PHOTOGRAPHER' ? t('role.photographer') : t('role.customer');
   const warning = portfolioWarning(
     role ?? 'CUSTOMER',
     portfolio.data?.length ?? 0,
   );
   const profileCompletion = progress.data.discoveryEligible
-    ? 'Đạt yêu cầu'
-    : 'Cần hoàn thiện';
+    ? t('profile.completeStatus')
+    : t('profile.incompleteStatus');
   const openSettings = () => router.push('/(details)/settings' as never);
   const openBack = () => {
     if (router.canGoBack()) router.back();
@@ -134,7 +137,7 @@ export default function ProfileRoute() {
             {avatarUrl.data ? (
               <Image
                 source={{ uri: avatarUrl.data }}
-                style={styles.avatar}
+                style={[styles.avatar, { borderColor: palette.surface }]}
                 contentFit="cover"
               />
             ) : (
@@ -152,12 +155,12 @@ export default function ProfileRoute() {
             )}
           </LinearGradient>
           <Pressable
-            accessibilityLabel="Chỉnh sửa ảnh đại diện"
+            accessibilityLabel={t('profile.avatarEdit')}
             accessibilityRole="button"
             onPress={() => router.push('/(details)/profile/edit')}
-            style={styles.avatarEdit}
+            style={[styles.avatarEdit, { borderColor: palette.surface }]}
           >
-            <SymbolView name="pencil" size={18} tintColor="#FFFFFF" />
+            <SymbolView name="pencil" size={18} tintColor={colors.onBrand} />
           </Pressable>
         </View>
         <Text
@@ -167,18 +170,17 @@ export default function ProfileRoute() {
           {displayName}
         </Text>
         <Text style={[styles.bio, { color: palette.muted }]}>
-          {profile.data.bio ||
-            `${roleLabel}. Hãy cập nhật phần giới thiệu của bạn.`}
+          {profile.data.bio || t('profile.bioFallback', { role: roleLabel })}
         </Text>
         <View style={styles.stats}>
           <StatCard
             value={String(portfolio.data?.length ?? 0)}
-            label="Portfolio"
+            label={t('profile.portfolioLabel')}
             palette={palette}
           />
           <StatCard
             value={profileCompletion}
-            label="Hồ sơ"
+            label={t('profile.profileLabel')}
             palette={palette}
             compact
           />
@@ -193,12 +195,12 @@ export default function ProfileRoute() {
         />
       </View>
 
-      <ProfileSection title="Tài khoản" palette={palette}>
+      <ProfileSection title={t('profile.accountSection')} palette={palette}>
         <MenuRow
           icon="person.crop.circle"
           iconColor={colors.brand}
           iconBackground={palette.infoContainer}
-          label="Chỉnh sửa hồ sơ"
+          label={t('profile.edit')}
           palette={palette}
           onPress={() => router.push('/(details)/profile/edit')}
         />
@@ -206,7 +208,7 @@ export default function ProfileRoute() {
           icon="checkmark.shield"
           iconColor={colors.brand}
           iconBackground={palette.infoContainer}
-          label="An toàn và quyền riêng tư"
+          label={t('profile.safetyPrivacy')}
           palette={palette}
           onPress={() => router.push('/(details)/trust' as never)}
         />
@@ -214,7 +216,7 @@ export default function ProfileRoute() {
           icon="calendar"
           iconColor={colors.brand}
           iconBackground={palette.infoContainer}
-          label="Lịch chụp"
+          label={t('profile.bookings')}
           palette={palette}
           onPress={() => router.push('/(details)/bookings' as never)}
           last={role !== 'PHOTOGRAPHER'}
@@ -224,7 +226,7 @@ export default function ProfileRoute() {
             icon="photo.on.rectangle"
             iconColor={colors.brand}
             iconBackground={palette.infoContainer}
-            label="Quản lý portfolio"
+            label={t('profile.managePortfolio')}
             palette={palette}
             onPress={() => router.push('/(details)/profile/portfolio')}
             last
@@ -232,41 +234,41 @@ export default function ProfileRoute() {
         ) : null}
       </ProfileSection>
 
-      <ProfileSection title="Tùy chọn" palette={palette}>
+      <ProfileSection title={t('profile.optionsSection')} palette={palette}>
         <MenuRow
           icon="bell"
           iconColor={colors.purple}
-          iconBackground="rgba(124, 58, 237, 0.12)"
-          label="Thông báo"
+          iconBackground={palette.infoContainer}
+          label={t('profile.notifications')}
           palette={palette}
           onPress={openSettings}
         />
         <MenuRow
           icon="globe"
           iconColor={colors.purple}
-          iconBackground="rgba(124, 58, 237, 0.12)"
-          label="Ngôn ngữ"
-          subtitle="Tiếng Việt"
+          iconBackground={palette.infoContainer}
+          label={t('profile.language')}
+          subtitle={t('profile.vietnamese')}
           palette={palette}
           onPress={openSettings}
           last
         />
       </ProfileSection>
 
-      <ProfileSection title="Trợ giúp" palette={palette}>
+      <ProfileSection title={t('profile.helpSection')} palette={palette}>
         <MenuRow
           icon="questionmark.circle"
           iconColor={colors.discovery.interest}
-          iconBackground="rgba(32, 201, 151, 0.14)"
-          label="Hỗ trợ và an toàn"
+          iconBackground={palette.successContainer}
+          label={t('profile.supportSafety')}
           palette={palette}
           onPress={() => router.push('/(details)/trust' as never)}
         />
         <MenuRow
           icon="info.circle"
           iconColor={colors.discovery.interest}
-          iconBackground="rgba(32, 201, 151, 0.14)"
-          label="Giới thiệu PhotoMatch"
+          iconBackground={palette.successContainer}
+          label={t('profile.aboutPhotoMatch')}
           palette={palette}
           onPress={() => void Linking.openURL('https://photomatch.vn')}
           last
@@ -300,13 +302,13 @@ export default function ProfileRoute() {
           <View style={styles.flex}>
             <Text style={[styles.readinessTitle, { color: palette.text }]}>
               {progress.data.discoveryEligible
-                ? 'Hồ sơ đã sẵn sàng khám phá'
-                : 'Hoàn thiện hồ sơ để được khám phá'}
+                ? t('profile.readinessReady')
+                : t('profile.readinessIncomplete')}
             </Text>
             <Text style={[styles.readinessText, { color: palette.muted }]}>
               {settings.data?.profileVisibilityEnabled
-                ? 'Đang hiển thị hồ sơ'
-                : 'Hồ sơ đang ẩn'}
+                ? t('profile.visibilityOn')
+                : t('profile.visibilityOff')}
             </Text>
           </View>
         </View>
@@ -315,7 +317,7 @@ export default function ProfileRoute() {
             key={item}
             style={[styles.readinessText, { color: palette.muted }]}
           >
-            • {missingLabels[item] ?? item}
+            • {t(missingLabelKeys[item] ?? 'common.unknown')}
           </Text>
         ))}
         {progress.data.discoveryReasons.map((item) => (
@@ -323,24 +325,25 @@ export default function ProfileRoute() {
             key={item}
             style={[styles.readinessText, { color: palette.muted }]}
           >
-            • {discoveryReasonLabels[item] ?? item}
+            • {t(discoveryReasonLabelKeys[item] ?? 'common.unknown')}
           </Text>
         ))}
         {warning ? (
           <Text style={[styles.warning, { color: palette.warning }]}>
-            {warning}
+            {t('profile.portfolioWarning')}
           </Text>
         ) : null}
         {role === 'PHOTOGRAPHER' && photographer.data?.availabilityStatus ? (
           <Text style={[styles.readinessText, { color: palette.muted }]}>
-            Nhận lịch: {photographer.data.availabilityStatus}
+            {t('profile.acceptingBookings')}:{' '}
+            {photographer.data.availabilityStatus}
           </Text>
         ) : null}
       </View>
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Đăng xuất"
+        accessibilityLabel={t('profile.logout')}
         onPress={() => void session.signOut()}
         style={({ pressed }) => [
           styles.logout,
@@ -360,7 +363,7 @@ export default function ProfileRoute() {
           <Text
             style={[styles.logoutText, { color: palette.onErrorContainer }]}
           >
-            Đăng xuất
+            {t('profile.logout')}
           </Text>
         </View>
       </Pressable>
@@ -377,18 +380,21 @@ function ProfileHeader({
   onBack: () => void;
   onSettings: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <View style={[styles.header, { borderBottomColor: palette.border }]}>
       <HeaderIcon
         icon="arrow.left"
-        label="Quay lại"
+        label={t('common.back')}
         tintColor={colors.brand}
         onPress={onBack}
       />
-      <Text style={[styles.headerTitle, { color: colors.brand }]}>Hồ sơ</Text>
+      <Text style={[styles.headerTitle, { color: colors.brand }]}>
+        {t('profile.headerTitle')}
+      </Text>
       <HeaderIcon
         icon="gearshape"
-        label="Mở cài đặt"
+        label={t('profile.openSettings')}
         tintColor={colors.brand}
         onPress={onSettings}
       />
@@ -574,7 +580,6 @@ const styles = StyleSheet.create({
     width: 124,
     height: 124,
     borderWidth: 4,
-    borderColor: colors.light.surface,
     borderRadius: 62,
   },
   avatarFallback: { alignItems: 'center', justifyContent: 'center' },
@@ -588,7 +593,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: colors.light.surface,
     borderRadius: 19,
     backgroundColor: colors.brand,
   },

@@ -2,6 +2,7 @@ import { createElement, type ChangeEvent } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { InlineError } from '@/components/feedback/InlineError';
+import { useOptionalTheme } from '@/providers/theme-provider';
 import { colors, radius, spacing, typography } from '@/theme';
 
 type DateTimeFieldProps = {
@@ -31,9 +32,11 @@ export function DateTimeField({
   maximumDate,
   error,
 }: DateTimeFieldProps) {
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: palette.text }]}>{label}</Text>
       {createElement('input', {
         'aria-label': label,
         type: 'date',
@@ -48,11 +51,11 @@ export function DateTimeField({
           minHeight: 48,
           width: '100%',
           boxSizing: 'border-box',
-          border: `1px solid ${error ? colors.danger : colors.light.border}`,
+          border: `1px solid ${error ? palette.error : palette.border}`,
           borderRadius: radius.md,
           padding: `0 ${spacing.lg}px`,
-          backgroundColor: colors.light.surface,
-          color: colors.light.text,
+          backgroundColor: palette.surface,
+          color: palette.text,
           fontFamily: typography.regular,
           fontSize: 16,
         },
@@ -65,7 +68,6 @@ export function DateTimeField({
 const styles = StyleSheet.create({
   container: { gap: spacing.sm },
   label: {
-    color: colors.light.text,
     fontFamily: typography.semibold,
     fontSize: 14,
   },

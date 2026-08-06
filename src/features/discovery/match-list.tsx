@@ -201,7 +201,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 28,
-    backgroundColor: colors.light.infoContainer,
   },
   avatarText: {
     fontFamily: typography.bold,

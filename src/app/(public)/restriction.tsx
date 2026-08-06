@@ -3,7 +3,9 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button } from '@/components/ui';
+import { useI18n } from '@/i18n/i18n-provider';
 import { useSession } from '@/providers/session-provider';
+import { useTheme } from '@/providers/theme-provider';
 import { colors, radius, spacing, typography } from '@/theme';
 
 function routeParam(value: string | string[] | undefined): string | undefined {
@@ -19,6 +21,9 @@ function validDate(value: string | undefined): Date | null {
 export default function RestrictionRoute() {
   const session = useSession();
   const router = useRouter();
+  const { t, locale } = useI18n();
+  const theme = useTheme();
+  const palette = theme.resolved === 'dark' ? colors.dark : colors.light;
   const params = useLocalSearchParams();
   const active = session.snapshot?.restrictions.find(
     (item) =>
@@ -37,12 +42,13 @@ export default function RestrictionRoute() {
     penaltyType === 'PERMANENT_BAN';
   const temporary =
     accountStatus === 'SUSPENDED' || penaltyType === 'TEMPORARY_SUSPENSION';
+  const reasonSuffix = reason ? ` do ${reason}` : '';
   const statusCopy = permanent
-    ? `Tài khoản của bạn đã bị ngưng hoạt động${reason ? ` do ${reason}` : ''}.`
+    ? t('restriction.permanentStatus', { reason: reasonSuffix })
     : temporary
-      ? `Tài khoản của bạn hiện bị tạm ngưng${reason ? ` do ${reason}` : ''}.`
-      : `Tài khoản của bạn đang bị hạn chế${reason ? ` do ${reason}` : ''}.`;
-  const message = `Chúng tôi cam kết xây dựng một cộng đồng lành mạnh và thân thiện, không khoan nhượng với các hành vi vi phạm quy tắc cộng đồng. ${statusCopy} Nếu bạn cho rằng đây là nhầm lẫn, vui lòng liên hệ bộ phận hỗ trợ.`;
+      ? t('restriction.temporaryStatus', { reason: reasonSuffix })
+      : t('restriction.limitedStatus', { reason: reasonSuffix });
+  const message = t('restriction.message', { status: statusCopy });
 
   const leave = async () => {
     try {
@@ -60,23 +66,38 @@ export default function RestrictionRoute() {
         contentContainerStyle: styles.content,
       }}
     >
-      <View style={styles.badge}>
-        <Text style={styles.badgeText}>{permanent ? '!' : '⏱'}</Text>
+      <View
+        style={[styles.badge, { backgroundColor: palette.warningContainer }]}
+      >
+        <Text style={[styles.badgeText, { color: palette.warning }]}>
+          {permanent ? '!' : '⏱'}
+        </Text>
       </View>
-      <Text accessibilityRole="header" style={styles.title}>
-        Nhắc nhở thân thiện
+      <Text
+        accessibilityRole="header"
+        style={[styles.title, { color: palette.text }]}
+      >
+        {t('restriction.title')}
       </Text>
-      <Text style={styles.description}>{message}</Text>
+      <Text style={[styles.description, { color: palette.muted }]}>
+        {message}
+      </Text>
       {endsAt ? (
-        <View style={styles.detail}>
-          <Text style={styles.detailLabel}>Thời gian mở lại dự kiến</Text>
-          <Text style={styles.detailValue}>
-            {endsAt.toLocaleString('vi-VN')}
+        <View style={[styles.detail, { backgroundColor: palette.surface }]}>
+          <Text style={[styles.detailLabel, { color: palette.muted }]}>
+            {t('restriction.reopensAt')}
+          </Text>
+          <Text style={[styles.detailValue, { color: palette.text }]}>
+            {endsAt.toLocaleString(locale === 'en' ? 'en-US' : 'vi-VN')}
           </Text>
         </View>
       ) : null}
       <Button
-        label={session.snapshot ? 'Đăng xuất' : 'Quay lại đăng nhập'}
+        label={
+          session.snapshot
+            ? t('restriction.signOut')
+            : t('restriction.returnToSignIn')
+        }
         variant="secondary"
         onPress={() => void leave()}
       />
@@ -98,21 +119,17 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.light.warningContainer,
   },
   badgeText: {
-    color: colors.light.warning,
     fontFamily: typography.bold,
     fontSize: 28,
   },
   title: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 24,
     textAlign: 'center',
   },
   description: {
-    color: colors.light.muted,
     fontFamily: typography.regular,
     fontSize: 16,
     lineHeight: 24,
@@ -122,14 +139,11 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.xs,
     borderRadius: radius.md,
-    backgroundColor: colors.light.surface,
   },
   detailLabel: {
-    color: colors.light.muted,
     fontFamily: typography.medium,
   },
   detailValue: {
-    color: colors.light.text,
     fontFamily: typography.semibold,
   },
 });

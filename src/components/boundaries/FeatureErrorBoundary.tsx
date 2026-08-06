@@ -3,6 +3,7 @@ import { Component, useEffect, type ErrorInfo, type ReactNode } from 'react';
 
 import { ErrorState } from '@/components/feedback';
 import { reportError } from '@/core/errors';
+import { useI18n } from '@/i18n/i18n-provider';
 
 type Props = {
   children: ReactNode;
@@ -29,11 +30,9 @@ export class FeatureErrorBoundary extends Component<Props, State> {
   render() {
     if (!this.state.error) return this.props.children;
     return (
-      <ErrorState
-        title={this.props.fallbackTitle ?? 'Tính năng gặp sự cố'}
-        description="PhotoMatch chưa thể hiển thị khu vực này."
-        primaryActionLabel="Tải lại"
-        onPrimaryAction={() => this.setState({ error: null })}
+      <FeatureFallback
+        title={this.props.fallbackTitle}
+        onRetry={() => this.setState({ error: null })}
       />
     );
   }
@@ -43,20 +42,25 @@ export function RouteErrorBoundary({ error, retry }: ExpoErrorBoundaryProps) {
   useEffect(() => {
     reportError(error, { feature: 'route' });
   }, [error]);
-  return (
-    <ErrorState
-      title="Màn hình gặp sự cố"
-      description="PhotoMatch không thể hiển thị nội dung này."
-      primaryActionLabel="Tải lại"
-      onPrimaryAction={() => void retry()}
-    />
-  );
+  return <FeatureFallback onRetry={() => void retry()} />;
 }
 
 export function RootErrorBoundary({ children }: { children: ReactNode }) {
+  return <FeatureErrorBoundary feature="root">{children}</FeatureErrorBoundary>;
+}
+
+function FeatureFallback({
+  title,
+  onRetry,
+}: {
+  title?: string;
+  onRetry: () => void;
+}) {
+  const { t } = useI18n();
   return (
-    <FeatureErrorBoundary feature="root" fallbackTitle="PhotoMatch gặp sự cố">
-      {children}
-    </FeatureErrorBoundary>
+    <ErrorState
+      title={title ?? t('common.featureError')}
+      onPrimaryAction={onRetry}
+    />
   );
 }

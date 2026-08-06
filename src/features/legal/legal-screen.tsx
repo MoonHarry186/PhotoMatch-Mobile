@@ -6,6 +6,7 @@ import { AppScreen } from '@/components/layout/app-screen';
 import { ErrorState, LoadingState } from '@/components/feedback';
 import { Button } from '@/components/ui';
 import type { LegalDocumentResponse } from '@/generated/api/types.gen';
+import { useI18n } from '@/i18n/i18n-provider';
 import { spacing, typography } from '@/theme';
 
 import { authApi } from '../auth/auth.api';
@@ -15,6 +16,7 @@ export function LegalScreen({
 }: {
   publicType: 'terms' | 'privacy';
 }) {
+  const { t } = useI18n();
   const [documents, setDocuments] = useState<LegalDocumentResponse[] | null>(
     null,
   );
@@ -25,7 +27,7 @@ export function LegalScreen({
     try {
       setDocuments(await authApi.currentLegal());
     } catch {
-      setError('Không thể tải văn bản pháp lý hiện hành.');
+      setError(t('legal.loadError'));
     }
   };
   useEffect(() => {
@@ -33,8 +35,8 @@ export function LegalScreen({
     void authApi
       .currentLegal()
       .then(setDocuments)
-      .catch(() => setError('Không thể tải văn bản pháp lý hiện hành.'));
-  }, [documents]);
+      .catch(() => setError(t('legal.loadError')));
+  }, [documents, t]);
 
   const visible = useMemo(() => {
     if (!documents) return [];
@@ -54,17 +56,19 @@ export function LegalScreen({
     <AppScreen>
       <Text accessibilityRole="header" style={styles.title}>
         {publicType === 'terms'
-          ? 'Điều khoản sử dụng'
-          : 'Chính sách quyền riêng tư'}
+          ? t('legal.termsTitle')
+          : t('legal.privacyTitle')}
       </Text>
       {visible.map((document) => (
         <View key={document.id} style={styles.document}>
           <Text style={styles.name}>
-            {document.documentType.replaceAll('_', ' ')}
+            {publicType === 'terms'
+              ? t('legal.termsTitle')
+              : t('legal.privacyTitle')}
           </Text>
-          <Text>Phiên bản {document.version}</Text>
+          <Text>{t('legal.version', { version: document.version })}</Text>
           <Button
-            label="Xem nội dung"
+            label={t('legal.viewContent')}
             variant="secondary"
             onPress={() => void Linking.openURL(document.contentUrl)}
           />

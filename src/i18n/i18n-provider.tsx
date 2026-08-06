@@ -27,10 +27,14 @@ type I18nContextValue = {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
-export function I18nProvider({ children }: React.PropsWithChildren) {
-  const [locale, setLocaleState] = useState<Locale>('vi');
+export function I18nProvider({
+  children,
+  initialLocale,
+}: React.PropsWithChildren<{ initialLocale?: Locale }>) {
+  const [locale, setLocaleState] = useState<Locale>(initialLocale ?? 'vi');
 
   useEffect(() => {
+    if (initialLocale) return;
     void AsyncStorage.getItem(STORAGE_KEY).then((stored) => {
       if (stored === 'vi' || stored === 'en') {
         setLocaleState(stored);
@@ -38,7 +42,7 @@ export function I18nProvider({ children }: React.PropsWithChildren) {
       }
       setLocaleState(getLocales()[0]?.languageCode === 'en' ? 'en' : 'vi');
     });
-  }, []);
+  }, [initialLocale]);
 
   const setLocale = useCallback(async (next: Locale) => {
     setLocaleState(next);
@@ -71,4 +75,8 @@ export function useI18n(): I18nContextValue {
   const value = useContext(I18nContext);
   if (!value) throw new Error('useI18n must be used within I18nProvider');
   return value;
+}
+
+export function useOptionalI18n(): I18nContextValue | null {
+  return useContext(I18nContext);
 }

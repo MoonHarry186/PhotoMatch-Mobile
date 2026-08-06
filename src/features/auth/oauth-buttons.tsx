@@ -13,7 +13,8 @@ import {
 import { useSession } from '@/providers/session-provider';
 import { AppError, getUserErrorMessage } from '@/core/errors';
 import { useI18n } from '@/i18n/i18n-provider';
-import { spacing } from '@/theme';
+import { useOptionalTheme } from '@/providers/theme-provider';
+import { colors, spacing } from '@/theme';
 
 import { authApi } from './auth.api';
 import { GoogleOAuthButton } from './google-oauth-button';
@@ -27,6 +28,8 @@ export function OAuthButtons() {
   const { acceptSession } = useSession();
   const router = useRouter();
   const { locale, t } = useI18n();
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
   const [appleError, setAppleError] = useState<string | null>(null);
   const [appleLoading, setAppleLoading] = useState(false);
 
@@ -101,13 +104,16 @@ export function OAuthButtons() {
           />
           {appleLoading ? (
             <View style={styles.appleSpinner}>
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={colors.onBrand} />
             </View>
           ) : null}
         </View>
       ) : null}
       {appleError ? (
-        <Text accessibilityRole="alert" style={styles.error}>
+        <Text
+          accessibilityRole="alert"
+          style={[styles.error, { color: palette.error }]}
+        >
           {appleError}
         </Text>
       ) : null}
@@ -121,7 +127,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#000000',
+    backgroundColor: colors.dark.background,
     overflow: 'hidden',
   },
   apple: { width: '100%', height: 48 },
@@ -132,5 +138,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  error: { color: '#B91C1C', textAlign: 'center' },
+  error: { textAlign: 'center' },
 });

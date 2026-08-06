@@ -6,19 +6,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { EmptyState, ErrorState, LoadingState } from '@/components/feedback';
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button, Select } from '@/components/ui';
+import { useI18n, type Translate } from '@/i18n/i18n-provider';
+import { messages } from '@/i18n/messages';
 import { queryKeys } from '@/services/api/query-keys';
+import { useTheme } from '@/providers/theme-provider';
 import { colors, elevation, radius, spacing, typography } from '@/theme';
 
 import { bookingApi } from './booking.api';
 import type { BookingStatusDto } from '@/generated/api/types.gen';
-
-const statusFilters = [
-  { value: '', label: 'Tất cả trạng thái' },
-  { value: 'PENDING', label: 'Đang chờ' },
-  { value: 'ACCEPTED', label: 'Đã xác nhận' },
-  { value: 'COMPLETED', label: 'Hoàn tất' },
-  { value: 'CANCELLED', label: 'Đã hủy' },
-];
 
 export function BookingList({
   scope,
@@ -26,8 +21,18 @@ export function BookingList({
   scope: { userId: string; roleId: string };
 }) {
   const router = useRouter();
+  const { t, locale } = useI18n();
+  const { resolved } = useTheme();
+  const palette = resolved === 'dark' ? colors.dark : colors.light;
   const [status, setStatus] = useState('');
-  const query = useInfiniteQuery({
+  const statusFilters = [
+    { value: '', label: t('booking.statusAll') },
+    { value: 'PENDING', label: t('booking.pending') },
+    { value: 'ACCEPTED', label: t('booking.accepted') },
+    { value: 'COMPLETED', label: t('booking.completed') },
+    { value: 'CANCELLED', label: t('booking.cancelled') },
+  ];
+  const query = useInfiniteQuery({  
     queryKey: queryKeys.bookings(scope, { status }),
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam, signal }) =>
@@ -43,22 +48,25 @@ export function BookingList({
     getNextPageParam: (page) => page.nextCursor,
   });
   const items = query.data?.pages.flatMap((page) => page.items) ?? [];
-  if (query.isPending) return <LoadingState label="Đang tải lịch chụp…" />;
+  if (query.isPending) return <LoadingState label={t('booking.loading')} />;
   if (query.isError)
     return (
       <ErrorState
-        title="Không thể tải lịch chụp"
-        primaryActionLabel="Thử lại"
+        title={t('booking.loadError')}
+        primaryActionLabel={t('common.retry')}
         onPrimaryAction={() => void query.refetch()}
       />
     );
   return (
     <AppScreen>
-      <Text accessibilityRole="header" style={styles.title}>
-        Lịch chụp
+      <Text
+        accessibilityRole="header"
+        style={[styles.title, { color: palette.text }]}
+      >
+        {t('booking.title')}
       </Text>
       <Select
-        label="Lọc trạng thái"
+        label={t('booking.filterStatus')}
         value={status}
         options={statusFilters}
         onChange={(next) =>
@@ -67,15 +75,15 @@ export function BookingList({
       />
       {!items.length ? (
         <EmptyState
-          title="Chưa có lịch chụp"
-          message="Các lịch chụp sẽ xuất hiện sau khi bạn gửi hoặc nhận lời mời."
+          title={t('booking.emptyTitle')}
+          message={t('booking.emptyMessage')}
         />
       ) : (
         <View style={styles.list}>
           {items.map((item) => (
             <Pressable
               key={item.id}
-              style={styles.card}
+              style={[styles.card, { backgroundColor: palette.surface }]}
               onPress={() =>
                 router.push({
                   pathname: '/(details)/booking/[id]',
@@ -83,28 +91,32 @@ export function BookingList({
                 })
               }
               accessibilityRole="button"
-              accessibilityLabel={`Mở lịch chụp ${item.id}`}
+              accessibilityLabel={t('booking.open', { id: item.id })}
             >
               <View style={styles.copy}>
-                <Text style={styles.status}>
-                  {bookingStatusLabel(item.status)}
+                <Text style={[styles.status, { color: palette.info }]}>
+                  {bookingStatusLabel(item.status, t)}
                 </Text>
-                <Text style={styles.date}>
-                  {new Date(item.scheduledStart).toLocaleString('vi-VN')}
+                <Text style={[styles.date, { color: palette.text }]}>
+                  {new Date(item.scheduledStart).toLocaleString(
+                    locale === 'en' ? 'en-US' : 'vi-VN',
+                  )}
                 </Text>
-                <Text style={styles.meta}>
-                  {item.agreedPrice?.toLocaleString('vi-VN') ?? 'Chưa có giá'}{' '}
+                <Text style={[styles.meta, { color: palette.muted }]}>
+                  {item.agreedPrice?.toLocaleString(
+                    locale === 'en' ? 'en-US' : 'vi-VN',
+                  ) ?? t('booking.noPrice')}{' '}
                   {item.currency ?? 'VND'}
                 </Text>
               </View>
-              <Text style={styles.chevron}>›</Text>
+              <Text style={[styles.chevron, { color: palette.muted }]}>›</Text>
             </Pressable>
           ))}
         </View>
       )}
       {query.hasNextPage ? (
         <Button
-          label="Xem thêm"
+          label={t('booking.loadMore')}
           variant="secondary"
           loading={query.isFetchingNextPage}
           onPress={() => void query.fetchNextPage()}
@@ -114,23 +126,29 @@ export function BookingList({
   );
 }
 
-export function bookingStatusLabel(status: string) {
-  const labels: Record<string, string> = {
-    DRAFT: 'Bản nháp',
-    PENDING: 'Đang chờ',
-    ACCEPTED: 'Đã xác nhận',
-    REJECTED: 'Đã từ chối',
-    CANCELLED: 'Đã hủy',
-    IN_PROGRESS: 'Đang thực hiện',
-    COMPLETED: 'Hoàn tất',
-    DISPUTED: 'Đang tranh chấp',
+export function bookingStatusLabel(status: string, t?: Translate) {
+  const labels: Record<string, Parameters<Translate>[0]> = {
+    DRAFT: 'booking.draft',
+    PENDING: 'booking.pending',
+    ACCEPTED: 'booking.accepted',
+    REJECTED: 'booking.rejected',
+    CANCELLED: 'booking.cancelled',
+    IN_PROGRESS: 'booking.inProgress',
+    COMPLETED: 'booking.completed',
+    DISPUTED: 'booking.disputed',
   };
-  return labels[status] ?? 'Không xác định';
+  const key = labels[status];
+  return key
+    ? t
+      ? t(key)
+      : messages.vi[key]
+    : t
+      ? t('common.unknown')
+      : messages.vi['common.unknown'];
 }
 
 const styles = StyleSheet.create({
   title: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 26,
   },
@@ -141,12 +159,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.lg,
     borderRadius: radius.lg,
-    backgroundColor: colors.light.surface,
     ...elevation.card,
   },
   copy: { flex: 1, gap: spacing.xs },
-  status: { color: colors.brand, fontFamily: typography.semibold },
-  date: { color: colors.light.text, fontFamily: typography.medium },
-  meta: { color: colors.light.muted },
-  chevron: { color: colors.light.muted, fontSize: 28 },
+  status: { fontFamily: typography.semibold },
+  date: { fontFamily: typography.medium },
+  meta: {},
+  chevron: { fontSize: 28 },
 });

@@ -10,9 +10,11 @@ import {
 } from '@/components/feedback';
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button, ConfirmDialog, TextField } from '@/components/ui';
-import { normalizeError } from '@/core/errors';
+import { getUserErrorMessage, normalizeError } from '@/core/errors';
+import { useI18n } from '@/i18n/i18n-provider';
 import { createSubmissionKey } from '@/services/api/idempotency';
 import { queryKeys } from '@/services/api/query-keys';
+import { useTheme } from '@/providers/theme-provider';
 import { colors, spacing, typography } from '@/theme';
 
 import { bookingApi, validateReviewInput } from './booking.api';
@@ -26,6 +28,9 @@ export function BookingDetailScreen({
   scope: { userId: string; roleId: string };
 }) {
   const router = useRouter();
+  const { t, locale } = useI18n();
+  const { resolved } = useTheme();
+  const palette = resolved === 'dark' ? colors.dark : colors.light;
   const client = useQueryClient();
   const [confirm, setConfirm] = useState<
     | 'ACCEPTED'
@@ -67,7 +72,7 @@ export function BookingDetailScreen({
       await client.invalidateQueries({ queryKey: queryKeys.bookings(scope) });
     },
     onError: (caught) => {
-      setFeedback(normalizeError(caught).message);
+      setFeedback(getUserErrorMessage(normalizeError(caught), locale));
       void booking.refetch();
     },
   });
@@ -80,9 +85,10 @@ export function BookingDetailScreen({
     onSuccess: (value) => {
       client.setQueryData(queryKeys.booking(scope, bookingId), value);
       setEditing(false);
-      setFeedback('Đã cập nhật yêu cầu đặt lịch.');
+      setFeedback(t('booking.updateSuccess'));
     },
-    onError: (caught) => setFeedback(normalizeError(caught).message),
+    onError: (caught) =>
+      setFeedback(getUserErrorMessage(normalizeError(caught), locale)),
   });
   const reviewMutation = useMutation({
     mutationFn: () =>
@@ -93,7 +99,7 @@ export function BookingDetailScreen({
       ),
     onSuccess: async (value) => {
       client.setQueryData(queryKeys.bookingReview(scope, bookingId), value);
-      setFeedback('Đã gửi đánh giá. Đánh giá đã chuyển sang chế độ chỉ đọc.');
+      setFeedback(t('booking.reviewSubmitted'));
       await client.invalidateQueries({
         queryKey: queryKeys.booking(scope, bookingId),
       });
@@ -107,7 +113,8 @@ export function BookingDetailScreen({
         });
       }
     },
-    onError: (caught) => setFeedback(normalizeError(caught).message),
+    onError: (caught) =>
+      setFeedback(getUserErrorMessage(normalizeError(caught), locale)),
   });
   const actions = useMemo((): NonNullable<typeof confirm>[] => {
     if (!booking.data) return [];
@@ -122,40 +129,67 @@ export function BookingDetailScreen({
     if (status === 'IN_PROGRESS') return ['COMPLETED', 'DISPUTED'];
     return [];
   }, [booking.data, scope.roleId]);
-  if (booking.isPending) return <LoadingState label="Đang tải lịch chụp…" />;
+  if (booking.isPending) return <LoadingState label={t('booking.loading')} />;
   if (booking.isError || !booking.data)
     return (
       <ErrorState
-        title="Không thể tải lịch chụp"
-        primaryActionLabel="Thử lại"
+        title={t('booking.loadError')}
+        primaryActionLabel={t('common.retry')}
         onPrimaryAction={() => void booking.refetch()}
-        secondaryActionLabel="Quay lại"
+        secondaryActionLabel={t('booking.back')}
         onSecondaryAction={() => router.back()}
       />
     );
   const value = booking.data;
   return (
     <AppScreen>
-      <Button label="Quay lại" variant="ghost" onPress={() => router.back()} />
-      <Text accessibilityRole="header" style={styles.title}>
-        Lịch chụp
+      <Button
+        label={t('booking.back')}
+        variant="ghost"
+        onPress={() => router.back()}
+      />
+      <Text
+        accessibilityRole="header"
+        style={[styles.title, { color: palette.text }]}
+      >
+        {t('booking.detailTitle')}
       </Text>
-      <View style={styles.card}>
-        <Text style={styles.status}>{bookingStatusLabel(value.status)}</Text>
-        <Text>
-          Thời gian: {new Date(value.scheduledStart).toLocaleString('vi-VN')} –{' '}
-          {new Date(value.scheduledEnd).toLocaleString('vi-VN')}
+      <View style={[styles.card, { backgroundColor: palette.surface }]}>
+        <Text style={[styles.status, { color: palette.info }]}>
+          {bookingStatusLabel(value.status, t)}
         </Text>
-        <Text>Địa chỉ: {value.address ?? 'Chưa cập nhật'}</Text>
-        <Text>
-          Giá: {value.agreedPrice?.toLocaleString('vi-VN') ?? 'Chưa cập nhật'}{' '}
+        <Text style={{ color: palette.text }}>
+          {t('booking.time')}:{' '}
+          {new Date(value.scheduledStart).toLocaleString(
+            locale === 'en' ? 'en-US' : 'vi-VN',
+          )}{' '}
+          –{' '}
+          {new Date(value.scheduledEnd).toLocaleString(
+            locale === 'en' ? 'en-US' : 'vi-VN',
+          )}
+        </Text>
+        <Text style={{ color: palette.text }}>
+          {t('booking.addressValue')}:{' '}
+          {value.address ?? t('booking.notUpdated')}
+        </Text>
+        <Text style={{ color: palette.text }}>
+          {t('booking.priceValue')}:{' '}
+          {value.agreedPrice?.toLocaleString(
+            locale === 'en' ? 'en-US' : 'vi-VN',
+          ) ?? t('booking.notUpdated')}{' '}
           {value.currency ?? 'VND'}
         </Text>
-        {value.note ? <Text>Ghi chú: {value.note}</Text> : null}
+        {value.note ? (
+          <Text style={{ color: palette.text }}>
+            {t('booking.noteValue')}: {value.note}
+          </Text>
+        ) : null}
       </View>
       {Array.isArray((value as { history?: unknown }).history) ? (
         <View style={styles.review}>
-          <Text style={styles.section}>Lịch sử trạng thái</Text>
+          <Text style={[styles.section, { color: palette.text }]}>
+            {t('booking.statusHistory')}
+          </Text>
           {(
             value as unknown as {
               history: {
@@ -169,9 +203,11 @@ export function BookingDetailScreen({
               key={`${entry.changedAt ?? index}-${entry.status ?? 'status'}`}
             >
               {entry.changedAt
-                ? new Date(entry.changedAt).toLocaleString('vi-VN')
+                ? new Date(entry.changedAt).toLocaleString(
+                    locale === 'en' ? 'en-US' : 'vi-VN',
+                  )
                 : ''}{' '}
-              {bookingStatusLabel(entry.status ?? '')}
+              {bookingStatusLabel(entry.status ?? '', t)}
               {entry.note ? ` · ${entry.note}` : ''}
             </Text>
           ))}
@@ -182,31 +218,31 @@ export function BookingDetailScreen({
           {editing ? (
             <>
               <TextField
-                label="Giá thỏa thuận (VND)"
+                label={t('booking.price')}
                 value={editPrice}
                 onChangeText={setEditPrice}
                 keyboardType="number-pad"
               />
               <TextField
-                label="Địa chỉ"
+                label={t('booking.address')}
                 value={editAddress}
                 onChangeText={setEditAddress}
               />
               <Button
-                label="Lưu thay đổi"
+                label={t('booking.saveChanges')}
                 loading={editMutation.isPending}
                 disabled={!editAddress.trim() || Number(editPrice) <= 0}
                 onPress={() => editMutation.mutate()}
               />
               <Button
-                label="Hủy chỉnh sửa"
+                label={t('booking.cancelEdit')}
                 variant="ghost"
                 onPress={() => setEditing(false)}
               />
             </>
           ) : (
             <Button
-              label="Chỉnh sửa yêu cầu"
+              label={t('booking.editRequest')}
               variant="secondary"
               onPress={() => {
                 setEditPrice(String(value.agreedPrice ?? ''));
@@ -221,7 +257,7 @@ export function BookingDetailScreen({
         {actions.map((action) => (
           <Button
             key={action}
-            label={bookingStatusLabel(action)}
+            label={bookingStatusLabel(action, t)}
             variant={
               action === 'REJECTED' ||
               action === 'CANCELLED' ||
@@ -233,34 +269,43 @@ export function BookingDetailScreen({
           />
         ))}
       </View>
-      {feedback ? <ActionFeedback title="Cập nhật" message={feedback} /> : null}
+      {feedback ? (
+        <ActionFeedback
+          title={t('booking.updateFeedback')}
+          message={feedback}
+        />
+      ) : null}
       {value.status === 'COMPLETED' ? (
         <View style={styles.review}>
           {review.data ? (
             <>
-              <Text style={styles.section}>Đánh giá của bạn</Text>
-              <Text>
+              <Text style={[styles.section, { color: palette.text }]}>
+                {t('booking.yourReview')}
+              </Text>
+              <Text style={{ color: palette.text }}>
                 {'★'.repeat(review.data.rating)} ·{' '}
-                {review.data.comment ?? 'Không có nhận xét'}
+                {review.data.comment ?? t('booking.noComment')}
               </Text>
             </>
           ) : (
             <>
-              <Text style={styles.section}>Đánh giá Photographer</Text>
+              <Text style={[styles.section, { color: palette.text }]}>
+                {t('booking.photographerReview')}
+              </Text>
               <TextField
-                label="Số sao (1–5)"
+                label={t('booking.rating')}
                 keyboardType="number-pad"
                 value={rating}
                 onChangeText={setRating}
               />
               <TextField
-                label="Nhận xét (không bắt buộc)"
+                label={t('booking.comment')}
                 value={comment}
                 onChangeText={setComment}
                 multiline
               />
               <Button
-                label="Gửi đánh giá"
+                label={t('booking.submitReview')}
                 disabled={
                   !validateReviewInput(
                     Number(rating),
@@ -276,9 +321,11 @@ export function BookingDetailScreen({
       ) : null}
       <ConfirmDialog
         visible={Boolean(confirm)}
-        title={`Xác nhận ${confirm ? bookingStatusLabel(confirm).toLowerCase() : ''}`}
-        message="Hành động sẽ được kiểm tra lại theo trạng thái canonical trên server."
-        confirmLabel="Xác nhận"
+        title={t('booking.confirmStatus', {
+          status: confirm ? bookingStatusLabel(confirm, t).toLowerCase() : '',
+        })}
+        message={t('booking.confirmMessage')}
+        confirmLabel={t('booking.confirm')}
         destructive={
           confirm === 'REJECTED' ||
           confirm === 'CANCELLED' ||
@@ -289,7 +336,7 @@ export function BookingDetailScreen({
         onConfirm={() => confirm && transition.mutate(confirm)}
       />
       <TextField
-        label="Lý do (nếu cần)"
+        label={t('booking.reason')}
         value={reason}
         onChangeText={setReason}
         multiline
@@ -300,7 +347,6 @@ export function BookingDetailScreen({
 
 const styles = StyleSheet.create({
   title: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 26,
   },
@@ -308,13 +354,11 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.lg,
     borderRadius: 16,
-    backgroundColor: colors.light.surface,
   },
-  status: { color: colors.brand, fontFamily: typography.semibold },
+  status: { fontFamily: typography.semibold },
   actions: { gap: spacing.sm },
   review: { gap: spacing.sm, paddingTop: spacing.md },
   section: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 18,
   },

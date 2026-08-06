@@ -1,6 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 
 import { ErrorState } from '@/components/feedback';
+import { useI18n } from '@/i18n/i18n-provider';
 import { BookingCreateForm } from '@/features/bookings/booking-create-form';
 import { useSession } from '@/providers/session-provider';
 
@@ -11,8 +12,9 @@ export default function BookingCreateRoute() {
     conversationId?: string;
   }>();
   const user = useSession().snapshot?.user;
+  const { t } = useI18n();
   if (!user?.currentRoleId || !params.photographerRoleId || !params.serviceId)
-    return <ErrorState title="Thiếu thông tin đặt lịch" />;
+    return <ErrorState title={t('common.invalidContentId')} />;
   return (
     <BookingCreateForm
       photographerRoleId={params.photographerRoleId}

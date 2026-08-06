@@ -10,6 +10,9 @@ import {
   View,
 } from 'react-native';
 
+import { useOptionalI18n } from '@/i18n/i18n-provider';
+import { messages } from '@/i18n/messages';
+import { useOptionalTheme } from '@/providers/theme-provider';
 import { colors, radius, spacing, typography } from '@/theme';
 
 import { Button } from '../ui';
@@ -36,8 +39,14 @@ export function UploadThumbnail({
   onRetry: () => void;
   onRemove: () => void;
 }) {
+  const i18n = useOptionalI18n();
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
+  const t = i18n?.t ?? ((key: keyof typeof messages.vi) => messages.vi[key]);
   return (
-    <View style={styles.thumbnail}>
+    <View
+      style={[styles.thumbnail, { backgroundColor: palette.surfaceVariant }]}
+    >
       <Image
         source={{ uri }}
         style={StyleSheet.absoluteFill}
@@ -45,28 +54,30 @@ export function UploadThumbnail({
       />
       {status === 'uploading' ? (
         <View style={styles.uploadOverlay}>
-          <ActivityIndicator color="#FFFFFF" />
+          <ActivityIndicator color={colors.onBrand} />
           <Text style={styles.overlayText}>
-            Đang tải {Math.round(progress * 100)}%
+            {t('common.uploadingPercent', {
+              percent: Math.round(progress * 100),
+            })}
           </Text>
         </View>
       ) : null}
       {status === 'failed' ? (
         <View style={styles.uploadOverlay}>
-          <Text style={styles.overlayText}>⚠ Upload thất bại</Text>
+          <Text style={styles.overlayText}>{t('common.uploadFailed')}</Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Thử tải lại ảnh"
+            accessibilityLabel={t('common.retryUpload')}
             style={styles.inlineAction}
             onPress={onRetry}
           >
-            <Text style={styles.inlineActionText}>Thử lại</Text>
+            <Text style={styles.inlineActionText}>{t('common.retry')}</Text>
           </Pressable>
         </View>
       ) : null}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Xóa ảnh"
+        accessibilityLabel={t('common.removePhoto')}
         style={styles.remove}
         onPress={onRemove}
       >
@@ -89,6 +100,11 @@ export function AvatarPicker({
   uploading?: boolean;
   progress?: number;
 }) {
+  const i18n = useOptionalI18n();
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
+  const t = i18n?.t ?? ((key: keyof typeof messages.vi) => messages.vi[key]);
+  const actionLabel = uri ? t('common.changePhoto') : t('common.selectAvatar');
   const pick = async () => {
     const current = await ImagePicker.getMediaLibraryPermissionsAsync();
     const permission = current.granted
@@ -110,7 +126,7 @@ export function AvatarPicker({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={uri ? 'Thay ảnh đại diện' : 'Chọn ảnh đại diện'}
+      accessibilityLabel={actionLabel}
       disabled={uploading}
       onPress={pick}
       style={styles.avatarPicker}
@@ -119,7 +135,13 @@ export function AvatarPicker({
         {uri ? (
           <Image source={{ uri }} style={styles.avatar} contentFit="cover" />
         ) : (
-          <View style={[styles.avatar, styles.placeholder]}>
+          <View
+            style={[
+              styles.avatar,
+              styles.placeholder,
+              { backgroundColor: palette.infoContainer },
+            ]}
+          >
             <SymbolView
               name={{
                 ios: 'person.crop.circle.badge.plus',
@@ -133,7 +155,7 @@ export function AvatarPicker({
         )}
         {uploading ? (
           <View style={styles.avatarUploadOverlay}>
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color={colors.onBrand} />
             <Text style={styles.avatarUploadText}>
               {Math.round(progress * 100)}%
             </Text>
@@ -147,17 +169,13 @@ export function AvatarPicker({
                 web: uri ? 'edit' : 'add',
               }}
               size={18}
-              tintColor="#FFFFFF"
+              tintColor={palette.surface}
             />
           </View>
         )}
       </View>
-      <Text style={styles.avatarAction}>
-        {uri ? 'Thay ảnh đại diện' : 'Chọn ảnh đại diện'}
-      </Text>
-      <Text style={styles.avatarHint}>
-        Ảnh vuông, rõ khuôn mặt · Tối đa 10 MB
-      </Text>
+      <Text style={styles.avatarAction}>{actionLabel}</Text>
+      <Text style={styles.avatarHint}>{t('common.avatarHint')}</Text>
     </Pressable>
   );
 }
@@ -169,9 +187,11 @@ export function ImageUploader({
   onPick: (asset: PickedImage) => void;
   loading?: boolean;
 }) {
+  const i18n = useOptionalI18n();
+  const t = i18n?.t ?? ((key: keyof typeof messages.vi) => messages.vi[key]);
   return (
     <Button
-      label="Chọn ảnh"
+      label={t('common.selectPhoto')}
       loading={loading}
       variant="secondary"
       onPress={async () => {
@@ -194,9 +214,11 @@ export function FileUploader({
   onPick: (asset: DocumentPicker.DocumentPickerAsset) => void;
   loading?: boolean;
 }) {
+  const i18n = useOptionalI18n();
+  const t = i18n?.t ?? ((key: keyof typeof messages.vi) => messages.vi[key]);
   return (
     <Button
-      label="Chọn tệp"
+      label={t('common.selectFile')}
       loading={loading}
       variant="secondary"
       onPress={async () => {
@@ -209,15 +231,14 @@ export function FileUploader({
   );
 }
 
-export function MediaPlaceholder({
-  label = 'Không thể tải nội dung',
-}: {
-  label?: string;
-}) {
+export function MediaPlaceholder({ label }: { label?: string }) {
+  const i18n = useOptionalI18n();
+  const resolvedLabel =
+    label ?? i18n?.t('common.noContent') ?? messages.vi['common.noContent'];
   return (
-    <View accessibilityLabel={label} style={styles.mediaPlaceholder}>
+    <View accessibilityLabel={resolvedLabel} style={styles.mediaPlaceholder}>
       <Text style={styles.placeholderText}>▧</Text>
-      <Text>{label}</Text>
+      <Text>{resolvedLabel}</Text>
     </View>
   );
 }
@@ -228,7 +249,6 @@ const styles = StyleSheet.create({
     height: 144,
     overflow: 'hidden',
     borderRadius: radius.md,
-    backgroundColor: colors.light.surfaceVariant,
   },
   uploadOverlay: {
     position: 'absolute',
@@ -239,10 +259,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    backgroundColor: 'rgba(2,6,23,0.68)',
+    backgroundColor: colors.discovery.scrim,
   },
   overlayText: {
-    color: '#FFFFFF',
+    color: colors.onBrand,
     fontFamily: typography.semibold,
     textAlign: 'center',
   },
@@ -252,7 +272,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  inlineActionText: { color: '#FFFFFF', textDecorationLine: 'underline' },
+  inlineActionText: { color: colors.onBrand, textDecorationLine: 'underline' },
   remove: {
     position: 'absolute',
     top: spacing.xs,
@@ -262,9 +282,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.full,
-    backgroundColor: 'rgba(2,6,23,0.64)',
+    backgroundColor: colors.discovery.scrimSoft,
   },
-  removeText: { color: '#FFFFFF', fontSize: 24 },
+  removeText: { color: colors.onBrand, fontSize: 24 },
   avatarPicker: {
     alignItems: 'center',
     gap: spacing.sm,
@@ -279,7 +299,6 @@ const styles = StyleSheet.create({
   placeholder: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#DBEAFE',
     borderWidth: 1,
     borderColor: colors.brand,
   },
@@ -292,7 +311,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#FFFFFF',
     borderRadius: radius.full,
     backgroundColor: colors.brand,
   },
@@ -306,10 +324,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.xs,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(15, 23, 42, 0.66)',
+    backgroundColor: colors.discovery.scrim,
   },
   avatarUploadText: {
-    color: '#FFFFFF',
+    color: colors.onBrand,
     fontFamily: typography.semibold,
   },
   avatarAction: {
@@ -318,7 +336,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   avatarHint: {
-    color: colors.light.muted,
     fontFamily: typography.regular,
     fontSize: 13,
     textAlign: 'center',
@@ -330,6 +347,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
     borderRadius: radius.md,
-    backgroundColor: '#E2E8F0',
   },
 });

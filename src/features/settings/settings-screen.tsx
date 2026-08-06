@@ -19,7 +19,8 @@ export function SettingsScreen({
 }) {
   const router = useRouter();
   const theme = useTheme();
-  const { locale, setLocale } = useI18n();
+  const palette = theme.resolved === 'dark' ? colors.dark : colors.light;
+  const { locale, setLocale, t } = useI18n();
   const client = useQueryClient();
   const settings = useQuery({
     queryKey: queryKeys.settings(scope),
@@ -29,31 +30,40 @@ export function SettingsScreen({
     mutationFn: onboardingApi.updateSettings,
     onSuccess: (value) => client.setQueryData(queryKeys.settings(scope), value),
   });
-  if (settings.isPending) return <LoadingState label="Đang tải cài đặt…" />;
+  if (settings.isPending) return <LoadingState label={t('settings.loading')} />;
   if (settings.isError || !settings.data)
     return (
       <ErrorState
-        title="Không thể tải cài đặt"
-        primaryActionLabel="Thử lại"
+        title={t('settings.loadError')}
+        primaryActionLabel={t('common.retry')}
         onPrimaryAction={() => void settings.refetch()}
       />
     );
   const value = settings.data;
   return (
     <AppScreen>
-      <Button label="Quay lại" variant="ghost" onPress={() => router.back()} />
-      <Text accessibilityRole="header" style={styles.title}>
-        Cài đặt
+      <Button
+        label={t('settings.back')}
+        variant="ghost"
+        onPress={() => router.back()}
+      />
+      <Text
+        accessibilityRole="header"
+        style={[styles.title, { color: palette.text }]}
+      >
+        {t('settings.title')}
       </Text>
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Giao diện</Text>
+        <Text style={[styles.sectionTitle, { color: palette.text }]}>
+          {t('settings.appearance')}
+        </Text>
         <Select
-          label="Chủ đề"
+          label={t('settings.theme')}
           value={theme.preference.toUpperCase()}
           options={[
-            { value: 'SYSTEM', label: 'Theo hệ thống' },
-            { value: 'LIGHT', label: 'Sáng' },
-            { value: 'DARK', label: 'Tối' },
+            { value: 'SYSTEM', label: t('settings.system') },
+            { value: 'LIGHT', label: t('settings.light') },
+            { value: 'DARK', label: t('settings.dark') },
           ]}
           onChange={(next) => {
             const selected = Array.isArray(next) ? next[0] : next;
@@ -66,11 +76,11 @@ export function SettingsScreen({
           }}
         />
         <Select
-          label="Ngôn ngữ"
+          label={t('settings.language')}
           value={locale.toUpperCase()}
           options={[
-            { value: 'VI', label: 'Tiếng Việt' },
-            { value: 'EN', label: 'English' },
+            { value: 'VI', label: t('settings.vietnamese') },
+            { value: 'EN', label: t('settings.english') },
           ]}
           onChange={(next) =>
             void setLocale(
@@ -81,38 +91,40 @@ export function SettingsScreen({
         />
       </View>
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Thông báo và riêng tư</Text>
+        <Text style={[styles.sectionTitle, { color: palette.text }]}>
+          {t('settings.notificationsPrivacy')}
+        </Text>
         <SettingRow
-          label="Thông báo kết nối"
+          label={t('settings.matchNotifications')}
           value={value.matchNotificationsEnabled ?? true}
           onChange={(next) =>
             update.mutate({ matchNotificationsEnabled: next })
           }
         />
         <SettingRow
-          label="Thông báo lịch chụp"
+          label={t('settings.bookingNotifications')}
           value={value.bookingNotificationsEnabled ?? true}
           onChange={(next) =>
             update.mutate({ bookingNotificationsEnabled: next })
           }
         />
         <SettingRow
-          label="Hiển thị trạng thái đã xem"
+          label={t('settings.readReceipts')}
           value={value.readReceiptsEnabled ?? true}
           onChange={(next) => update.mutate({ readReceiptsEnabled: next })}
         />
         <SettingRow
-          label="Hiển thị hồ sơ"
+          label={t('settings.profileVisibility')}
           value={value.profileVisibilityEnabled ?? false}
           onChange={(next) => update.mutate({ profileVisibilityEnabled: next })}
         />
         <Select
-          label="Thời gian hiển thị Gần tôi"
+          label={t('settings.nearbyDuration')}
           value={String(value.locationVisibilityDurationHours ?? 24)}
           options={[
-            { value: '1', label: '1 giờ' },
-            { value: '24', label: '24 giờ' },
-            { value: '72', label: '3 ngày' },
+            { value: '1', label: t('settings.oneHour') },
+            { value: '24', label: t('settings.oneDay') },
+            { value: '72', label: t('settings.threeDays') },
           ]}
           onChange={(next) => {
             const selected = Array.isArray(next) ? next[0] : next;
@@ -122,33 +134,35 @@ export function SettingsScreen({
           }}
         />
         <Button
-          label="Xóa vị trí đã lưu"
+          label={t('settings.deleteLocation')}
           variant="secondary"
           onPress={() => void onboardingApi.deleteLocation()}
         />
       </View>
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Pháp lý và thông tin</Text>
+        <Text style={[styles.sectionTitle, { color: palette.text }]}>
+          {t('settings.legalInfo')}
+        </Text>
         <Button
-          label="Điều khoản sử dụng"
+          label={t('legal.termsTitle')}
           variant="secondary"
           onPress={() => router.push('/(public)/legal/terms')}
         />
         <Button
-          label="Chính sách quyền riêng tư"
+          label={t('legal.privacyTitle')}
           variant="secondary"
           onPress={() => router.push('/(public)/legal/privacy')}
         />
         <Button
-          label="Giới thiệu PhotoMatch"
+          label={t('settings.about')}
           variant="secondary"
           onPress={() => void Linking.openURL('https://photomatch.vn')}
         />
         <Button
-          label="Mời bạn bè"
+          label={t('settings.invite')}
           onPress={() =>
             void Share.share({
-              message: 'Tham gia PhotoMatch để tìm photographer phù hợp.',
+              message: t('settings.shareMessage'),
             })
           }
         />
@@ -166,26 +180,28 @@ function SettingRow({
   value: boolean;
   onChange: (value: boolean) => void;
 }) {
+  const theme = useTheme();
+  const palette = theme.resolved === 'dark' ? colors.dark : colors.light;
   return (
     <View style={styles.row}>
-      <Text style={styles.flex}>{label}</Text>
+      <Text style={[styles.flex, { color: palette.text }]}>{label}</Text>
       <Switch
         accessibilityLabel={label}
         value={value}
         onValueChange={onChange}
+        trackColor={{ false: palette.border, true: colors.brand }}
+        thumbColor={palette.surface}
       />
     </View>
   );
 }
 const styles = StyleSheet.create({
   title: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 26,
   },
   section: { gap: spacing.md },
   sectionTitle: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 18,
   },
@@ -196,5 +212,5 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
   },
-  flex: { flex: 1, color: colors.light.text },
+  flex: { flex: 1 },
 });

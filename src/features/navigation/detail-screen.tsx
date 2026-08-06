@@ -4,6 +4,7 @@ import { Text } from 'react-native';
 import { ErrorState } from '@/components/feedback';
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button } from '@/components/ui';
+import { useI18n } from '@/i18n/i18n-provider';
 import { idRouteParamsSchema } from '@/schemas/route-params';
 
 export function DetailScreen({
@@ -14,15 +15,16 @@ export function DetailScreen({
   id: string | string[] | undefined;
 }) {
   const router = useRouter();
+  const { t } = useI18n();
   const parsed = idRouteParamsSchema.safeParse({
     id: Array.isArray(id) ? id[0] : id,
   });
   if (!parsed.success) {
     return (
       <ErrorState
-        title="Liên kết không hợp lệ"
-        message="Mã nội dung không đúng định dạng."
-        actionLabel="Quay lại"
+        title={t('common.invalidLink')}
+        message={t('common.invalidContentId')}
+        actionLabel={t('common.back')}
         onAction={() => router.back()}
       />
     );
@@ -31,12 +33,9 @@ export function DetailScreen({
     <AppScreen>
       <Text accessibilityRole="header">{entity}</Text>
       <Text selectable>{parsed.data.id}</Text>
-      <Text>
-        Nội dung sẽ được tải từ endpoint được phân quyền khi feature tương ứng
-        được mở.
-      </Text>
+      <Text>{t('common.featurePlaceholder')}</Text>
       <Button
-        label="Quay lại"
+        label={t('common.back')}
         variant="secondary"
         onPress={() => router.back()}
       />

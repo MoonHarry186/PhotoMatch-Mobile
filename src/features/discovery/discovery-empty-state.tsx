@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.full,
-    backgroundColor: 'rgba(56, 163, 241, 0.16)',
+    backgroundColor: colors.discovery.infoSoft,
   },
   errorIconShell: {
     width: 68,
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.full,
-    backgroundColor: 'rgba(241, 91, 108, 0.18)',
+    backgroundColor: colors.discovery.rejectSoft,
   },
   errorIcon: {
     color: colors.discovery.reject,
@@ -97,14 +97,14 @@ const styles = StyleSheet.create({
     fontSize: 30,
   },
   title: {
-    color: '#FFFFFF',
+    color: colors.onBrand,
     fontFamily: typography.bold,
     fontSize: 20,
     textAlign: 'center',
   },
   message: {
     maxWidth: 320,
-    color: 'rgba(255, 255, 255, 0.72)',
+    color: colors.discovery.whiteTextSubtle,
     lineHeight: 21,
     textAlign: 'center',
   },
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
   },
   retry: { padding: spacing.sm },
   retryLabel: {
-    color: '#FFFFFF',
+    color: colors.onBrand,
     fontFamily: typography.semibold,
   },
   pressed: { opacity: 0.72 },

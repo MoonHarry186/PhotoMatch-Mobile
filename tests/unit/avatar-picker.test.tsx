@@ -36,6 +36,8 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { AvatarPicker } from '@/components/media/media-components';
 import { AvatarSection } from '@/features/onboarding/onboarding-sections';
+import { I18nProvider } from '@/i18n/i18n-provider';
+import { ThemeProvider } from '@/providers/theme-provider';
 
 describe('AvatarPicker', () => {
   it('makes choosing and replacing an avatar explicit', async () => {
@@ -71,11 +73,15 @@ describe('AvatarPicker', () => {
     const onSaved = jest.fn();
     const view = await render(
       <QueryClientProvider client={queryClient}>
-        <AvatarSection
-          scope={{ userId: 'user-1', roleId: 'customer-role' }}
-          onSaved={onSaved}
-          showContinue
-        />
+        <I18nProvider initialLocale="vi">
+          <ThemeProvider>
+            <AvatarSection
+              scope={{ userId: 'user-1', roleId: 'customer-role' }}
+              onSaved={onSaved}
+              showContinue
+            />
+          </ThemeProvider>
+        </I18nProvider>
       </QueryClientProvider>,
     );
 

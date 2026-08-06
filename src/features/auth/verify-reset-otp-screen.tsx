@@ -6,6 +6,7 @@ import { AppScreen } from '@/components/layout/app-screen';
 import { Button } from '@/components/ui';
 import { normalizeError } from '@/core/errors';
 import { useI18n } from '@/i18n/i18n-provider';
+import { useOptionalTheme } from '@/providers/theme-provider';
 import { colors, spacing, typography } from '@/theme';
 
 import { authApi } from './auth.api';
@@ -29,6 +30,8 @@ export function VerifyResetOtpScreen() {
   const params = useLocalSearchParams<ResetOtpParams>();
   const router = useRouter();
   const { t } = useI18n();
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
   const verificationOtpSchema = useMemo(
     () => createVerificationOtpSchema(t),
     [t],
@@ -136,7 +139,9 @@ export function VerifyResetOtpScreen() {
         })}
       />
       <View style={styles.otpSection}>
-        <Text style={styles.otpLabel}>{t('auth.verificationCode')}</Text>
+        <Text style={[styles.otpLabel, { color: palette.text }]}>
+          {t('auth.verificationCode')}
+        </Text>
         <OtpInput
           value={otp}
           onChange={(value) => {
@@ -152,7 +157,7 @@ export function VerifyResetOtpScreen() {
         <Text
           accessibilityLiveRegion="polite"
           accessibilityRole="alert"
-          style={styles.message}
+          style={[styles.message, { color: palette.error }]}
         >
           {feedback.text}
         </Text>
@@ -185,7 +190,6 @@ function secondsFromParam(value?: string): number {
 const styles = StyleSheet.create({
   otpSection: { gap: spacing.sm },
   otpLabel: {
-    color: colors.light.text,
     fontFamily: typography.semibold,
     fontSize: 14,
     textAlign: 'center',

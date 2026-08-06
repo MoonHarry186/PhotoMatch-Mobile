@@ -12,21 +12,23 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { EmptyState, ErrorState, LoadingState } from '@/components/feedback';
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button, ConfirmDialog, Select, TextField } from '@/components/ui';
-import { normalizeError } from '@/core/errors';
+import { getUserErrorMessage, normalizeError } from '@/core/errors';
+import { useI18n } from '@/i18n/i18n-provider';
 import { createSubmissionKey } from '@/services/api/idempotency';
 import { queryKeys } from '@/services/api/query-keys';
 import { uploadMedia } from '@/services/media/upload';
+import { useTheme } from '@/providers/theme-provider';
 import { colors, radius, spacing, typography } from '@/theme';
 
 import { trustApi } from './trust.api';
 
 const reasons = [
-  { value: 'SPAM', label: 'Spam' },
-  { value: 'HARASSMENT', label: 'Quấy rối' },
-  { value: 'FAKE_PROFILE', label: 'Hồ sơ giả' },
-  { value: 'INAPPROPRIATE_CONTENT', label: 'Nội dung không phù hợp' },
-  { value: 'SCAM', label: 'Lừa đảo' },
-  { value: 'OTHER', label: 'Khác' },
+  { value: 'SPAM', key: 'trust.reasonSpam' },
+  { value: 'HARASSMENT', key: 'trust.reasonHarassment' },
+  { value: 'FAKE_PROFILE', key: 'trust.reasonFakeProfile' },
+  { value: 'INAPPROPRIATE_CONTENT', key: 'trust.reasonInappropriate' },
+  { value: 'SCAM', key: 'trust.reasonScam' },
+  { value: 'OTHER', key: 'trust.reasonOther' },
 ] as const;
 
 export function TrustScreen({
@@ -34,6 +36,9 @@ export function TrustScreen({
 }: {
   scope: { userId: string; roleId: string };
 }) {
+  const { locale, t } = useI18n();
+  const { resolved } = useTheme();
+  const palette = resolved === 'dark' ? colors.dark : colors.light;
   const router = useRouter();
   const params = useLocalSearchParams<{
     targetUserId?: string;
@@ -68,19 +73,21 @@ export function TrustScreen({
       setTarget('');
       setBlockReason('');
       setConfirmBlock(false);
-      setFeedback('Đã chặn tài khoản. Các tương tác mới đã được đóng.');
+      setFeedback(t('trust.block'));
       await blocks.refetch();
       await client.invalidateQueries({
         queryKey: queryKeys.discoveryRoot(scope),
       });
       await client.invalidateQueries({ queryKey: queryKeys.matches(scope) });
     },
-    onError: (caught) => setFeedback(normalizeError(caught).message),
+    onError: (caught) =>
+      setFeedback(getUserErrorMessage(normalizeError(caught), locale)),
   });
   const unblockMutation = useMutation({
     mutationFn: (blockedUserId: string) => trustApi.unblock(blockedUserId),
     onSuccess: () => void blocks.refetch(),
-    onError: (caught) => setFeedback(normalizeError(caught).message),
+    onError: (caught) =>
+      setFeedback(getUserErrorMessage(normalizeError(caught), locale)),
   });
   const reportMutation = useMutation({
     mutationFn: () =>
@@ -98,72 +105,81 @@ export function TrustScreen({
         createSubmissionKey().current(),
       ),
     onSuccess: () => {
-      setFeedback(
-        'Đã tiếp nhận báo cáo. Việc tiếp nhận không khẳng định kết quả xử lý.',
-      );
+      setFeedback(t('trust.reportReceived'));
       setDescription('');
       setEvidence([]);
     },
-    onError: (caught) => setFeedback(normalizeError(caught).message),
+    onError: (caught) =>
+      setFeedback(getUserErrorMessage(normalizeError(caught), locale)),
   });
   const items = blocks.data?.pages.flatMap((page) => page.items) ?? [];
-  if (blocks.isPending)
-    return <LoadingState label="Đang tải danh sách chặn…" />;
+  if (blocks.isPending) return <LoadingState label={t('common.loading')} />;
   if (blocks.isError)
     return (
       <ErrorState
-        title="Không thể tải danh sách chặn"
-        primaryActionLabel="Thử lại"
+        title={t('common.errorLoading')}
+        primaryActionLabel={t('common.retry')}
         onPrimaryAction={() => void blocks.refetch()}
       />
     );
   return (
     <AppScreen>
-      <Button label="Quay lại" variant="ghost" onPress={() => router.back()} />
-      <Text accessibilityRole="header" style={styles.title}>
-        An toàn và quyền riêng tư
+      <Button
+        label={t('trust.back')}
+        variant="ghost"
+        onPress={() => router.back()}
+      />
+      <Text
+        accessibilityRole="header"
+        style={[styles.title, { color: palette.text }]}
+      >
+        {t('trust.title')}
       </Text>
-      <View style={styles.card}>
-        <Text style={styles.section}>Chặn người dùng</Text>
+      <View style={[styles.card, { backgroundColor: palette.surface }]}>
+        <Text style={[styles.section, { color: palette.text }]}>
+          {t('trust.blockSection')}
+        </Text>
         <TextField
-          label="ID người dùng cần chặn"
+          label={t('trust.targetLabel')}
           value={target}
           onChangeText={setTarget}
-          placeholder="Dán ID từ hồ sơ hoặc cuộc trò chuyện"
+          placeholder={t('trust.targetPlaceholder')}
         />
         <TextField
-          label="Lý do (không bắt buộc)"
+          label={t('trust.blockReason')}
           value={blockReason}
           onChangeText={setBlockReason}
         />
         <Button
-          label="Chặn tài khoản"
+          label={t('trust.block')}
           variant="danger"
           disabled={!target.trim()}
           onPress={() => setConfirmBlock(true)}
         />
       </View>
-      <View style={styles.card}>
-        <Text style={styles.section}>Báo cáo</Text>
+      <View style={[styles.card, { backgroundColor: palette.surface }]}>
+        <Text style={[styles.section, { color: palette.text }]}>
+          {t('trust.reportSection')}
+        </Text>
         <Select
-          label="Lý do báo cáo"
+          label={t('trust.reportReason')}
           value={reportReason}
           options={reasons.map((item) => ({
             value: item.value,
-            label: item.label,
+            label: t(item.key),
           }))}
           onChange={(value) => setReportReason(value as typeof reportReason)}
         />
         <TextField
-          label="Mô tả"
+          label={t('trust.description')}
           value={description}
           onChangeText={setDescription}
           multiline
-          placeholder="Mô tả ngắn gọn, không đưa thông tin nhạy cảm không cần thiết"
+          placeholder={t('trust.descriptionPlaceholder')}
         />
         <View style={styles.actions}>
           <Button
-            label="Đính kèm ảnh"
+            label={t('trust.attachImage')}
             variant="secondary"
             onPress={async () => {
               const result = await ImagePicker.launchImageLibraryAsync({
@@ -177,12 +193,14 @@ export function TrustScreen({
                   ...new Set([...current, uploaded.id]),
                 ]);
               } catch (caught) {
-                setFeedback(normalizeError(caught).message);
+                setFeedback(
+                  getUserErrorMessage(normalizeError(caught), locale),
+                );
               }
             }}
           />
           <Button
-            label="Đính kèm tệp"
+            label={t('trust.attachFile')}
             variant="secondary"
             onPress={async () => {
               const result = await DocumentPicker.getDocumentAsync({
@@ -196,34 +214,45 @@ export function TrustScreen({
                   ...new Set([...current, uploaded.id]),
                 ]);
               } catch (caught) {
-                setFeedback(normalizeError(caught).message);
+                setFeedback(
+                  getUserErrorMessage(normalizeError(caught), locale),
+                );
               }
             }}
           />
         </View>
         {evidence.length ? (
-          <Text style={styles.muted}>Đã đính kèm {evidence.length} tệp.</Text>
+          <Text style={[styles.muted, { color: palette.muted }]}>
+            {t('trust.evidenceCount', { count: evidence.length })}
+          </Text>
         ) : null}
         <Button
-          label="Gửi báo cáo"
+          label={t('trust.submitReport')}
           disabled={!target.trim() || !description.trim()}
           loading={reportMutation.isPending}
           onPress={() => reportMutation.mutate()}
         />
       </View>
-      <View style={styles.card}>
-        <Text style={styles.section}>Đã chặn</Text>
+      <View style={[styles.card, { backgroundColor: palette.surface }]}>
+        <Text style={[styles.section, { color: palette.text }]}>
+          {t('trust.blockedSection')}
+        </Text>
         {!items.length ? (
-          <EmptyState title="Chưa chặn ai" />
+          <EmptyState title={t('trust.emptyBlocked')} />
         ) : (
           items.map((item) => (
-            <View key={item.id} style={styles.row}>
-              <Text style={styles.flex}>{item.blockedUserId}</Text>
+            <View
+              key={item.id}
+              style={[styles.row, { borderBottomColor: palette.border }]}
+            >
+              <Text style={[styles.flex, { color: palette.text }]}>
+                {item.blockedUserId}
+              </Text>
               <Pressable
                 accessibilityRole="button"
                 onPress={() => unblockMutation.mutate(item.blockedUserId)}
               >
-                <Text style={styles.link}>Bỏ chặn</Text>
+                <Text style={styles.link}>{t('trust.unblock')}</Text>
               </Pressable>
             </View>
           ))
@@ -236,9 +265,9 @@ export function TrustScreen({
       ) : null}
       <ConfirmDialog
         visible={confirmBlock}
-        title="Chặn tài khoản này?"
-        message="Bạn sẽ không thể tạo tương tác mới với tài khoản này. Lịch sử hợp lệ không bị xóa."
-        confirmLabel="Chặn"
+        title={t('trust.blockTitle')}
+        message={t('trust.blockMessage')}
+        confirmLabel={t('trust.confirmBlock')}
         destructive
         loading={blockMutation.isPending}
         onCancel={() => setConfirmBlock(false)}
@@ -250,7 +279,6 @@ export function TrustScreen({
 
 const styles = StyleSheet.create({
   title: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 26,
   },
@@ -258,10 +286,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg,
     borderRadius: radius.lg,
-    backgroundColor: colors.light.surface,
   },
   section: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 18,
   },
@@ -271,9 +297,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.light.border,
   },
-  flex: { flex: 1, color: colors.light.text },
+  flex: { flex: 1 },
   link: {
     minHeight: 44,
     paddingVertical: spacing.sm,
@@ -282,5 +307,5 @@ const styles = StyleSheet.create({
   },
   feedback: { color: colors.brand },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  muted: { color: colors.light.muted },
+  muted: {},
 });

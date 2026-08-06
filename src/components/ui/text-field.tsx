@@ -10,6 +10,9 @@ import {
 } from 'react-native';
 
 import { InlineError } from '@/components/feedback/InlineError';
+import { useOptionalI18n } from '@/i18n/i18n-provider';
+import { messages } from '@/i18n/messages';
+import { useOptionalTheme } from '@/providers/theme-provider';
 import { colors, controlHeight, radius, spacing, typography } from '@/theme';
 
 type Props = TextInputProps & {
@@ -28,8 +31,8 @@ export const TextField = forwardRef<TextInput, Props>(function TextField(
     error,
     secureToggle,
     secureTextEntry,
-    showPasswordLabel = 'Hiện mật khẩu',
-    hidePasswordLabel = 'Ẩn mật khẩu',
+    showPasswordLabel,
+    hidePasswordLabel,
     multiline,
     style,
     ...props
@@ -37,23 +40,40 @@ export const TextField = forwardRef<TextInput, Props>(function TextField(
   ref,
 ) {
   const [hidden, setHidden] = useState(secureTextEntry);
+  const i18n = useOptionalI18n();
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
+  const resolvedShowPasswordLabel =
+    showPasswordLabel ??
+    i18n?.t('auth.showPassword') ??
+    messages.vi['auth.showPassword'];
+  const resolvedHidePasswordLabel =
+    hidePasswordLabel ??
+    i18n?.t('auth.hidePassword') ??
+    messages.vi['auth.hidePassword'];
   return (
     <View style={styles.container}>
       <View style={styles.labelRow}>
-        <Text style={styles.label}>{label}</Text>
+        <Text style={[styles.label, { color: palette.text }]}>{label}</Text>
         {labelAccessory}
       </View>
       <View
         style={[
           styles.field,
+          { backgroundColor: palette.surface, borderColor: palette.border },
           multiline && styles.multilineField,
           error && styles.errorField,
         ]}
       >
         <TextInput
           ref={ref}
-          style={[styles.input, multiline && styles.multilineInput, style]}
-          placeholderTextColor={colors.light.muted}
+          style={[
+            styles.input,
+            { color: palette.text },
+            multiline && styles.multilineInput,
+            style,
+          ]}
+          placeholderTextColor={palette.muted}
           accessibilityLabel={label}
           accessibilityHint={error}
           secureTextEntry={hidden}
@@ -63,7 +83,9 @@ export const TextField = forwardRef<TextInput, Props>(function TextField(
         {secureToggle ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={hidden ? showPasswordLabel : hidePasswordLabel}
+            accessibilityLabel={
+              hidden ? resolvedShowPasswordLabel : resolvedHidePasswordLabel
+            }
             onPress={() => setHidden((value) => !value)}
             style={styles.toggle}
           >
@@ -78,7 +100,7 @@ export const TextField = forwardRef<TextInput, Props>(function TextField(
                     }
               }
               size={22}
-              tintColor={colors.light.text}
+              tintColor={palette.text}
             />
           </Pressable>
         ) : null}
@@ -98,7 +120,6 @@ const styles = StyleSheet.create({
   },
   label: {
     flexShrink: 1,
-    color: colors.light.text,
     fontFamily: typography.semibold,
     fontSize: 14,
   },
@@ -106,8 +127,6 @@ const styles = StyleSheet.create({
     minHeight: controlHeight,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: colors.light.border,
     borderWidth: 1,
     borderRadius: radius.md,
   },
@@ -120,7 +139,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: controlHeight,
     paddingHorizontal: spacing.md,
-    color: colors.light.text,
     fontFamily: typography.regular,
     fontSize: 16,
   },

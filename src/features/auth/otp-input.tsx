@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 
 import { useI18n } from '@/i18n/i18n-provider';
+import { useOptionalTheme } from '@/providers/theme-provider';
 import { colors, radius, spacing, typography } from '@/theme';
 
 const OTP_LENGTH = 6;
@@ -26,6 +27,8 @@ export function OtpInput({
   hasError = false,
 }: Props) {
   const { t } = useI18n();
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
   const refs = useRef<(TextInput | null)[]>([]);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const digits = Array.from(
@@ -109,6 +112,11 @@ export function OtpInput({
           selectTextOnFocus
           style={[
             styles.input,
+            {
+              borderColor: palette.border,
+              backgroundColor: palette.surface,
+              color: palette.text,
+            },
             focusedIndex === index && styles.focused,
             hasError && styles.error,
           ]}
@@ -137,10 +145,7 @@ const styles = StyleSheet.create({
     height: 56,
     paddingHorizontal: 0,
     borderWidth: 1,
-    borderColor: colors.light.border,
     borderRadius: radius.md,
-    backgroundColor: colors.light.surface,
-    color: colors.light.text,
     fontFamily: typography.semibold,
     fontSize: 24,
     textAlign: 'center',

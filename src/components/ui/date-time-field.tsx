@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { InlineError } from '@/components/feedback/InlineError';
+import { useOptionalI18n } from '@/i18n/i18n-provider';
+import { messages } from '@/i18n/messages';
+import { useOptionalTheme } from '@/providers/theme-provider';
 import { colors, controlHeight, radius, spacing, typography } from '@/theme';
 
 export type DateTimeFieldProps = {
@@ -24,10 +27,19 @@ export function DateTimeField({
   mode = 'date',
   minimumDate,
   maximumDate,
-  placeholder = 'Chọn ngày',
+  placeholder,
   error,
 }: DateTimeFieldProps) {
   const [visible, setVisible] = useState(false);
+  const i18n = useOptionalI18n();
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
+  const locale = i18n?.locale ?? 'vi';
+  const resolvedPlaceholder =
+    placeholder ??
+    i18n?.t('common.chooseDate') ??
+    messages.vi['common.chooseDate'];
+  const formatLocale = locale === 'en' ? 'en-US' : 'vi-VN';
   const pickerValue = value ?? maximumDate ?? new Date();
   return (
     <View style={styles.container}>
@@ -37,14 +49,23 @@ export function DateTimeField({
         accessibilityLabel={label}
         accessibilityHint={error}
         onPress={() => setVisible(true)}
-        style={[styles.field, error && styles.errorField]}
+        style={[
+          styles.field,
+          { backgroundColor: palette.surface, borderColor: palette.border },
+          error && styles.errorField,
+        ]}
       >
-        <Text style={[styles.value, !value && styles.placeholder]}>
+        <Text
+          style={[
+            styles.value,
+            { color: value ? palette.text : palette.muted },
+          ]}
+        >
           {value
             ? mode === 'date'
-              ? value.toLocaleDateString('vi-VN')
-              : value.toLocaleTimeString('vi-VN')
-            : placeholder}
+              ? value.toLocaleDateString(formatLocale)
+              : value.toLocaleTimeString(formatLocale)
+            : resolvedPlaceholder}
         </Text>
         <SymbolView
           name={{
@@ -57,7 +78,12 @@ export function DateTimeField({
         />
       </Pressable>
       {visible ? (
-        <View style={styles.picker}>
+        <View
+          style={[
+            styles.picker,
+            { backgroundColor: palette.surface, borderColor: palette.border },
+          ]}
+        >
           <DateTimePicker
             value={pickerValue}
             mode={mode}
@@ -72,11 +98,16 @@ export function DateTimeField({
           {Platform.OS === 'ios' ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Đóng bộ chọn ngày"
+              accessibilityLabel={
+                i18n?.t('common.closeDatePicker') ??
+                messages.vi['common.closeDatePicker']
+              }
               onPress={() => setVisible(false)}
               style={styles.done}
             >
-              <Text style={styles.doneText}>Xong</Text>
+              <Text style={[styles.doneText, { color: colors.brand }]}>
+                {i18n?.t('common.done') ?? messages.vi['common.done']}
+              </Text>
             </Pressable>
           ) : null}
         </View>
@@ -89,7 +120,6 @@ export function DateTimeField({
 const styles = StyleSheet.create({
   container: { gap: spacing.sm },
   label: {
-    color: colors.light.text,
     fontFamily: typography.semibold,
     fontSize: 14,
   },
@@ -100,25 +130,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.md,
     borderWidth: 1,
-    borderColor: colors.light.border,
     borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
-    backgroundColor: '#FFFFFF',
   },
   errorField: { borderColor: colors.danger },
   value: {
     flex: 1,
-    color: colors.light.text,
     fontFamily: typography.regular,
     fontSize: 16,
   },
-  placeholder: { color: colors.light.muted },
   picker: {
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.light.border,
     borderRadius: radius.md,
-    backgroundColor: colors.light.surface,
   },
   done: {
     minHeight: 44,
@@ -126,7 +150,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: colors.light.border,
   },
-  doneText: { color: colors.brand, fontFamily: typography.semibold },
+  doneText: { fontFamily: typography.semibold },
 });

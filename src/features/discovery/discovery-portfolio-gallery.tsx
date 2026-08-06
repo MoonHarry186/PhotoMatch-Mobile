@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     fontSize: 96,
   },
   placeholderLabel: {
-    color: 'rgba(255, 255, 255, 0.76)',
+    color: colors.discovery.whiteStrong,
     fontFamily: typography.medium,
     fontSize: 13,
   },
@@ -172,9 +172,9 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 3,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.38)',
+    backgroundColor: colors.discovery.whiteMedium,
   },
-  progressActive: { backgroundColor: '#FFFFFF' },
+  progressActive: { backgroundColor: colors.onBrand },
   previousZone: {
     position: 'absolute',
     top: 64,

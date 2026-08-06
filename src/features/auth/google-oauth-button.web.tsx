@@ -9,7 +9,7 @@ import { env } from '@/config/env';
 import { AppError, getUserErrorMessage } from '@/core/errors';
 import { useI18n } from '@/i18n/i18n-provider';
 import { useSession } from '@/providers/session-provider';
-import { spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 import { authApi } from './auth.api';
 import { GoogleSignInButton } from './google-sign-in-button';
@@ -117,5 +117,5 @@ export function GoogleOAuthButton() {
 
 const styles = StyleSheet.create({
   container: { gap: spacing.sm },
-  error: { color: '#B91C1C', textAlign: 'center' },
+  error: { color: colors.danger, textAlign: 'center' },
 });

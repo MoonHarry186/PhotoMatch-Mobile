@@ -11,14 +11,11 @@ import {
 
 import { Button, MultiSelect, PriceRangeField, Select } from '@/components/ui';
 import type { CatalogItemResponse } from '@/generated/api/types.gen';
+import { useI18n } from '@/i18n/i18n-provider';
+import { useTheme } from '@/providers/theme-provider';
 import { colors, radius, spacing, typography } from '@/theme';
 
 import { nearbyFiltersSchema, type NearbyFilters } from './nearby.types';
-
-const radiusOptions = [5, 10, 20, 30, 50, 100].map((radius) => ({
-  value: String(radius),
-  label: `${radius} km`,
-}));
 
 export function NearbyFilterSheet({
   visible,
@@ -33,6 +30,13 @@ export function NearbyFilterSheet({
   onApply: (filters: NearbyFilters) => void;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
+  const { resolved } = useTheme();
+  const palette = resolved === 'dark' ? colors.dark : colors.light;
+  const radiusOptions = [5, 10, 20, 30, 50, 100].map((value) => ({
+    value: String(value),
+    label: t('discovery.filters.radiusUnit', { value }),
+  }));
   const [draft, setDraft] = useState(filters);
   const [minPrice, setMinPrice] = useState(
     filters.minPrice === undefined ? '' : String(filters.minPrice),
@@ -49,7 +53,7 @@ export function NearbyFilterSheet({
       ...(maxPrice ? { maxPrice: Number(maxPrice) } : { maxPrice: undefined }),
     });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Bộ lọc chưa hợp lệ');
+      setError(t('nearby.invalidFilters'));
       return;
     }
     onApply(parsed.data);
@@ -65,20 +69,26 @@ export function NearbyFilterSheet({
     >
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Đóng bộ lọc Nearby"
-        style={styles.backdrop}
+        accessibilityLabel={t('discovery.filters.close')}
+        style={[
+          styles.backdrop,
+          { backgroundColor: colors.discovery.scrimSoft },
+        ]}
         onPress={onClose}
       />
-      <View style={styles.sheet}>
+      <View style={[styles.sheet, { backgroundColor: palette.surface }]}>
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          <Text accessibilityRole="header" style={styles.title}>
-            Bộ lọc quanh đây
+          <Text
+            accessibilityRole="header"
+            style={[styles.title, { color: palette.text }]}
+          >
+            {t('nearby.filterTitle')}
           </Text>
           <MultiSelect
-            label="Dịch vụ"
+            label={t('nearby.filterServices')}
             options={services.map((service) => ({
               value: service.id,
               label: service.name,
@@ -98,7 +108,7 @@ export function NearbyFilterSheet({
             }}
           />
           <Select
-            label="Bán kính"
+            label={t('nearby.radius')}
             value={String(draft.radiusKm)}
             options={radiusOptions}
             onChange={(value) =>
@@ -106,12 +116,12 @@ export function NearbyFilterSheet({
             }
           />
           <FilterSwitch
-            label="Chỉ người đang sẵn sàng"
+            label={t('nearby.availableOnly')}
             value={draft.availableOnly}
             onChange={(availableOnly) => setDraft({ ...draft, availableOnly })}
           />
           <FilterSwitch
-            label="Chỉ tài khoản đã xác minh"
+            label={t('nearby.verifiedOnly')}
             value={draft.verifiedOnly}
             onChange={(verifiedOnly) => setDraft({ ...draft, verifiedOnly })}
           />
@@ -120,8 +130,8 @@ export function NearbyFilterSheet({
               {error}
             </Text>
           ) : null}
-          <Button label="Áp dụng bộ lọc" onPress={submit} />
-          <Button label="Đóng" variant="ghost" onPress={onClose} />
+          <Button label={t('nearby.applyFilters')} onPress={submit} />
+          <Button label={t('common.close')} variant="ghost" onPress={onClose} />
         </ScrollView>
       </View>
     </Modal>
@@ -137,12 +147,16 @@ function FilterSwitch({
   value: boolean;
   onChange: (value: boolean) => void;
 }) {
+  const { resolved } = useTheme();
+  const palette = resolved === 'dark' ? colors.dark : colors.light;
   return (
     <View style={styles.switchRow}>
-      <Text style={styles.switchLabel}>{label}</Text>
+      <Text style={[styles.switchLabel, { color: palette.text }]}>{label}</Text>
       <Switch
         accessibilityLabel={label}
         value={value}
+        trackColor={{ false: palette.border, true: palette.success }}
+        thumbColor={palette.surface}
         onValueChange={onChange}
       />
     </View>
@@ -152,14 +166,12 @@ function FilterSwitch({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(2, 6, 23, 0.48)',
   },
   sheet: {
     maxHeight: '88%',
     overflow: 'hidden',
     borderTopLeftRadius: radius.sheet,
     borderTopRightRadius: radius.sheet,
-    backgroundColor: colors.light.surface,
   },
   content: {
     gap: spacing.lg,
@@ -167,7 +179,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
   },
   title: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 22,
   },
@@ -180,7 +191,6 @@ const styles = StyleSheet.create({
   },
   switchLabel: {
     flex: 1,
-    color: colors.light.text,
     fontFamily: typography.semibold,
   },
   error: { color: colors.danger },

@@ -18,10 +18,12 @@ import {
   type PickedImage,
 } from '@/components/media/media-components';
 import { Button, ConfirmDialog, Select, TextField } from '@/components/ui';
+import { useI18n } from '@/i18n/i18n-provider';
 import { onboardingApi } from '@/features/onboarding/onboarding.api';
 import { portfolioWarning } from '@/features/onboarding/onboarding.model';
 import { useAppSnackbar } from '@/hooks/use-app-snackbar';
 import { useSession } from '@/providers/session-provider';
+import { useTheme } from '@/providers/theme-provider';
 import { queryKeys } from '@/services/api/query-keys';
 import { colors, radius, spacing, typography } from '@/theme';
 import { profileApi } from './profile.api';
@@ -31,6 +33,9 @@ const emptyDraft: PortfolioDraft = { title: '', description: '' };
 
 export function PortfolioScreen() {
   const session = useSession();
+  const { t } = useI18n();
+  const { resolved } = useTheme();
+  const palette = resolved === 'dark' ? colors.dark : colors.light;
   const router = useRouter();
   const client = useQueryClient();
   const { showSnackbar } = useAppSnackbar();
@@ -88,11 +93,11 @@ export function PortfolioScreen() {
       setDraft(emptyDraft);
       setUploadProgress(0);
       refresh();
-      showSnackbar({ message: 'Đã thêm ảnh vào portfolio' });
-    } catch (error) {
+      showSnackbar({ message: t('profile.addedPhoto') });
+    } catch {
       setUploadStatus('failed');
       showSnackbar({
-        message: error instanceof Error ? error.message : 'Không thể thêm ảnh',
+        message: t('profile.cannotAddPhoto'),
       });
     } finally {
       setBusy(false);
@@ -109,11 +114,10 @@ export function PortfolioScreen() {
       });
       setEditItem(null);
       refresh();
-      showSnackbar({ message: 'Đã cập nhật thông tin ảnh' });
-    } catch (error) {
+      showSnackbar({ message: t('profile.updatedPhoto') });
+    } catch {
       showSnackbar({
-        message:
-          error instanceof Error ? error.message : 'Không thể cập nhật ảnh',
+        message: t('profile.cannotUpdatePhoto'),
       });
     } finally {
       setBusy(false);
@@ -129,10 +133,9 @@ export function PortfolioScreen() {
         serviceId: detail.serviceId ?? undefined,
       };
       setEditItem({ id: detail.id, draft: original, original });
-    } catch (error) {
+    } catch {
       showSnackbar({
-        message:
-          error instanceof Error ? error.message : 'Không thể tải chi tiết ảnh',
+        message: t('profile.cannotLoadPhoto'),
       });
     }
   };
@@ -143,10 +146,10 @@ export function PortfolioScreen() {
       await profileApi.deletePortfolio(roleId, deleteItem);
       setDeleteItem(null);
       refresh();
-      showSnackbar({ message: 'Ảnh đã được xoá khỏi portfolio' });
-    } catch (error) {
+      showSnackbar({ message: t('profile.deletedPhoto') });
+    } catch {
       showSnackbar({
-        message: error instanceof Error ? error.message : 'Không thể xoá ảnh',
+        message: t('profile.cannotDeletePhoto'),
       });
     } finally {
       setBusy(false);
@@ -168,26 +171,21 @@ export function PortfolioScreen() {
         items.map((item, sortOrder) => ({ id: item.id, sortOrder })),
       );
       refresh();
-    } catch (error) {
+    } catch {
       showSnackbar({
-        message:
-          error instanceof Error
-            ? error.message
-            : 'Không thể sắp xếp portfolio',
+        message: t('profile.cannotReorder'),
       });
     }
   };
   if (!user || portfolio.isPending)
-    return <LoadingState label="Đang tải portfolio…" />;
+    return <LoadingState label={t('profile.portfolioLoading')} />;
   if (role !== 'PHOTOGRAPHER' || !roleId)
-    return (
-      <AccessDeniedState message="Chỉ Photographer mới có thể quản lý portfolio." />
-    );
+    return <AccessDeniedState message={t('common.accessDenied')} />;
   if (portfolio.isError || !portfolio.data)
     return (
       <ErrorState
-        title="Không thể tải portfolio"
-        primaryActionLabel="Thử lại"
+        title={t('profile.loadError')}
+        primaryActionLabel={t('common.retry')}
         onPrimaryAction={() => void portfolio.refetch()}
       />
     );
@@ -195,21 +193,24 @@ export function PortfolioScreen() {
   return (
     <AppScreen>
       <Button
-        label="Quay lại hồ sơ"
+        label={t('profile.back')}
         variant="ghost"
         onPress={() => router.back()}
       />
       <View style={styles.heading}>
         <View style={styles.flex}>
-          <Text accessibilityRole="header" style={styles.title}>
-            Quản lý portfolio
+          <Text
+            accessibilityRole="header"
+            style={[styles.title, { color: palette.text }]}
+          >
+            {t('profile.portfolioManageTitle')}
           </Text>
-          <Text style={styles.muted}>
-            {portfolio.data.length}/6 ảnh tối thiểu
+          <Text style={[styles.muted, { color: palette.muted }]}>
+            {t('profile.portfolioMinimum', { count: portfolio.data.length })}
           </Text>
         </View>
         <Button
-          label="Thêm ảnh"
+          label={t('profile.addPhoto')}
           onPress={() => {
             setCreateOpen(true);
             setUploadStatus('queued');
@@ -217,14 +218,21 @@ export function PortfolioScreen() {
         />
       </View>
       {warning ? (
-        <View style={styles.warning}>
-          <Text style={styles.warningText}>{warning}</Text>
+        <View
+          style={[
+            styles.warning,
+            { backgroundColor: palette.warningContainer },
+          ]}
+        >
+          <Text style={[styles.warningText, { color: palette.warning }]}>
+            {t('profile.portfolioWarning')}
+          </Text>
         </View>
       ) : null}
       {portfolio.data.length === 0 ? (
         <EmptyState
-          title="Portfolio đang trống"
-          message="Thêm ảnh đầu tiên để giới thiệu phong cách của bạn."
+          title={t('profile.portfolioEmptyTitle')}
+          message={t('profile.portfolioEmptyMessage')}
         />
       ) : (
         <View style={styles.list}>
@@ -246,11 +254,14 @@ export function PortfolioScreen() {
         onRequestClose={() => !busy && setCreateOpen(false)}
       >
         <AppScreen>
-          <Text accessibilityRole="header" style={styles.title}>
-            Thêm ảnh portfolio
+          <Text
+            accessibilityRole="header"
+            style={[styles.title, { color: palette.text }]}
+          >
+            {t('profile.addPortfolioPhoto')}
           </Text>
-          <Text style={styles.muted}>
-            Ảnh JPG, PNG hoặc WebP, tối đa 10 MB.
+          <Text style={[styles.muted, { color: palette.muted }]}>
+            {t('profile.imageRequirements')}
           </Text>
           {picked ? (
             <UploadThumbnail
@@ -267,13 +278,13 @@ export function PortfolioScreen() {
             />
           )}
           <TextField
-            label="Tiêu đề"
+            label={t('profile.title')}
             value={draft.title}
             onChangeText={(title) => setDraft((value) => ({ ...value, title }))}
             maxLength={120}
           />
           <TextField
-            label="Mô tả"
+            label={t('profile.description')}
             value={draft.description}
             onChangeText={(description) =>
               setDraft((value) => ({ ...value, description }))
@@ -289,13 +300,13 @@ export function PortfolioScreen() {
             }
           />
           <Button
-            label="Tải lên và lưu"
+            label={t('profile.uploadSave')}
             onPress={() => void uploadAndCreate()}
             disabled={!picked}
             loading={busy}
           />
           <Button
-            label="Huỷ"
+            label={t('profile.cancel')}
             variant="secondary"
             onPress={() => setCreateOpen(false)}
             disabled={busy}
@@ -312,11 +323,14 @@ export function PortfolioScreen() {
       >
         {editItem ? (
           <AppScreen>
-            <Text accessibilityRole="header" style={styles.title}>
-              Chỉnh sửa ảnh
+            <Text
+              accessibilityRole="header"
+              style={[styles.title, { color: palette.text }]}
+            >
+              {t('profile.editPhoto')}
             </Text>
             <TextField
-              label="Tiêu đề"
+              label={t('profile.title')}
               value={editItem.draft.title}
               onChangeText={(title) =>
                 setEditItem(
@@ -326,7 +340,7 @@ export function PortfolioScreen() {
               }
             />
             <TextField
-              label="Mô tả"
+              label={t('profile.description')}
               value={editItem.draft.description}
               onChangeText={(description) =>
                 setEditItem(
@@ -350,17 +364,17 @@ export function PortfolioScreen() {
               }
             />
             <Button
-              label="Lưu thay đổi"
+              label={t('profile.saveChanges')}
               onPress={() => void saveEdit()}
               loading={busy}
             />
             <Button
-              label="Huỷ"
+              label={t('profile.cancel')}
               variant="secondary"
               onPress={() => {
                 if (!dirty(editItem.draft, editItem.original))
                   setEditItem(null);
-                else showSnackbar({ message: 'Bạn còn thay đổi chưa lưu' });
+                else showSnackbar({ message: t('profile.unsavedChanges') });
               }}
               disabled={busy}
             />
@@ -369,9 +383,9 @@ export function PortfolioScreen() {
       </Modal>
       <ConfirmDialog
         visible={Boolean(deleteItem)}
-        title="Xoá ảnh portfolio?"
-        message="Ảnh sẽ bị ẩn khỏi hồ sơ công khai và không còn tính vào điều kiện 6 ảnh."
-        confirmLabel="Xoá ảnh"
+        title={t('profile.deletePortfolioTitle')}
+        message={t('profile.deletePortfolioMessage')}
+        confirmLabel={t('profile.deletePhoto')}
         destructive
         loading={busy}
         onConfirm={() => void confirmDelete()}
@@ -399,13 +413,16 @@ function PortfolioRow({
   onDelete: () => void;
   onMove: (direction: -1 | 1) => void;
 }) {
+  const { t } = useI18n();
+  const { resolved } = useTheme();
+  const palette = resolved === 'dark' ? colors.dark : colors.light;
   const url = useQuery({
     queryKey: queryKeys.public('asset', { assetId: item.assetId }),
     queryFn: () => profileApi.assetUrl(item.assetId),
     retry: 1,
   });
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, { backgroundColor: palette.surface }]}>
       {url.data ? (
         <Image
           source={{ uri: url.data }}
@@ -414,24 +431,38 @@ function PortfolioRow({
         />
       ) : (
         <View style={styles.rowImage}>
-          <MediaPlaceholder label="Ảnh không khả dụng" />
+          <MediaPlaceholder label={t('profile.imageUnavailable')} />
         </View>
       )}
       <View style={styles.rowContent}>
-        <Text style={styles.rowTitle}>{item.title || 'Chưa đặt tiêu đề'}</Text>
+        <Text style={[styles.rowTitle, { color: palette.text }]}>
+          {item.title || t('profile.noTitle')}
+        </Text>
         {item.description ? (
           <Text numberOfLines={2}>{item.description}</Text>
         ) : null}
         <View style={styles.actions}>
           <Button
-            label="Lên"
+            label={t('profile.moveUp')}
             variant="ghost"
             onPress={() => onMove(-1)}
             disabled={index === 0}
           />
-          <Button label="Xuống" variant="ghost" onPress={() => onMove(1)} />
-          <Button label="Sửa" variant="secondary" onPress={onEdit} />
-          <Button label="Xoá" variant="danger" onPress={onDelete} />
+          <Button
+            label={t('profile.moveDown')}
+            variant="ghost"
+            onPress={() => onMove(1)}
+          />
+          <Button
+            label={t('profile.editShort')}
+            variant="secondary"
+            onPress={onEdit}
+          />
+          <Button
+            label={t('profile.deleteShort')}
+            variant="danger"
+            onPress={onDelete}
+          />
         </View>
       </View>
     </View>
@@ -447,9 +478,10 @@ function ServiceSelect({
   value?: string;
   onChange: (value: string) => void;
 }) {
+  const { t } = useI18n();
   return (
     <Select
-      label="Dịch vụ liên kết (tuỳ chọn)"
+      label={t('profile.linkedService')}
       options={services.map((item) => ({
         value: item.service.id,
         label: item.service.name,
@@ -472,23 +504,20 @@ const styles = StyleSheet.create({
   heading: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   flex: { flex: 1 },
   title: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 24,
   },
-  muted: { color: colors.light.muted },
+  muted: {},
   warning: {
     padding: spacing.md,
     borderRadius: radius.md,
-    backgroundColor: colors.light.warningContainer,
   },
-  warningText: { color: colors.warning, fontFamily: typography.semibold },
+  warningText: { fontFamily: typography.semibold },
   list: { gap: spacing.md },
   row: {
     flexDirection: 'row',
     gap: spacing.md,
     padding: spacing.md,
-    backgroundColor: '#FFFFFF',
     borderRadius: radius.md,
   },
   rowImage: {
@@ -496,7 +525,6 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: radius.sm,
     overflow: 'hidden',
-    backgroundColor: colors.light.surfaceVariant,
   },
   rowContent: { flex: 1, gap: spacing.xs },
   rowTitle: { fontFamily: typography.semibold },

@@ -12,7 +12,9 @@ import { StatusBadge } from '@/components/domain';
 import { LoadingState } from '@/components/feedback';
 import { Button, ConfirmDialog, Select } from '@/components/ui';
 import { getUserErrorMessage, normalizeError } from '@/core/errors';
+import { useI18n } from '@/i18n/i18n-provider';
 import { queryKeys } from '@/services/api/query-keys';
+import { useTheme } from '@/providers/theme-provider';
 import { colors, radius, spacing, typography } from '@/theme';
 
 import {
@@ -28,35 +30,46 @@ type Scope = { userId: string; roleId: string };
 
 const permissionCopy: Record<
   LocationPermissionState,
-  { label: string; tone: 'neutral' | 'success' | 'warning'; message: string }
+  {
+    labelKey:
+      | 'nearby.permissionUndetermined'
+      | 'nearby.permissionGranted'
+      | 'nearby.permissionDenied'
+      | 'nearby.permissionRestricted'
+      | 'nearby.permissionServicesDisabled';
+    messageKey:
+      | 'nearby.permissionUndeterminedMessage'
+      | 'nearby.permissionGrantedMessage'
+      | 'nearby.permissionDeniedMessage'
+      | 'nearby.permissionRestrictedMessage'
+      | 'nearby.permissionServicesDisabledMessage';
+    tone: 'neutral' | 'success' | 'warning';
+  }
 > = {
   undetermined: {
-    label: 'Chưa hỏi quyền',
+    labelKey: 'nearby.permissionUndetermined',
     tone: 'neutral',
-    message:
-      'PhotoMatch chỉ hỏi quyền khi bạn chủ động cập nhật vị trí hiện tại.',
+    messageKey: 'nearby.permissionUndeterminedMessage',
   },
   granted: {
-    label: 'Đã cấp quyền',
+    labelKey: 'nearby.permissionGranted',
     tone: 'success',
-    message: 'Bạn có thể cập nhật vị trí chính xác bất cứ lúc nào.',
+    messageKey: 'nearby.permissionGrantedMessage',
   },
   denied: {
-    label: 'Chưa cho phép',
+    labelKey: 'nearby.permissionDenied',
     tone: 'warning',
-    message:
-      'Bạn đã từ chối quyền vị trí. Các tính năng khác vẫn sử dụng bình thường.',
+    messageKey: 'nearby.permissionDeniedMessage',
   },
   restricted: {
-    label: 'Quyền bị chặn',
+    labelKey: 'nearby.permissionRestricted',
     tone: 'warning',
-    message: 'Hãy cho phép vị trí trong Cài đặt để cập nhật lại.',
+    messageKey: 'nearby.permissionRestrictedMessage',
   },
   'services-disabled': {
-    label: 'Dịch vụ vị trí đang tắt',
+    labelKey: 'nearby.permissionServicesDisabled',
     tone: 'warning',
-    message:
-      'Hãy bật dịch vụ vị trí của thiết bị. Nearby vẫn có thể dùng vị trí đã lưu trước đó.',
+    messageKey: 'nearby.permissionServicesDisabledMessage',
   },
 };
 
@@ -65,6 +78,9 @@ function errorMessage(error: unknown) {
 }
 
 export function LocationPermissionCard({ scope }: { scope: Scope }) {
+  const { t } = useI18n();
+  const { resolved } = useTheme();
+  const palette = resolved === 'dark' ? colors.dark : colors.light;
   const queryClient = useQueryClient();
   const [permission, setPermission] =
     useState<LocationPermissionState>('undetermined');
@@ -104,12 +120,12 @@ export function LocationPermissionCard({ scope }: { scope: Scope }) {
           : await requestLocationPermission();
       setPermission(next);
       if (next !== 'granted') {
-        throw new Error(permissionCopy[next].message);
+        throw new Error(t(permissionCopy[next].messageKey));
       }
       return nearbyApi.updateExactLocation(await captureCurrentLocation());
     },
     onSuccess: async () => {
-      setFeedback('Đã cập nhật vị trí. Nearby đang tải lại từ đầu.');
+      setFeedback(t('nearby.locationUpdated'));
       await resetNearby();
       await queryClient.invalidateQueries({
         queryKey: queryKeys.presence(scope),
@@ -121,7 +137,7 @@ export function LocationPermissionCard({ scope }: { scope: Scope }) {
     mutationFn: nearbyApi.clearExactLocation,
     onSuccess: async () => {
       setClearConfirmVisible(false);
-      setFeedback('Đã xóa vị trí chính xác và tắt discovery presence.');
+      setFeedback(t('nearby.locationCleared'));
       await resetNearby();
       await queryClient.invalidateQueries({
         queryKey: queryKeys.presence(scope),
@@ -134,26 +150,34 @@ export function LocationPermissionCard({ scope }: { scope: Scope }) {
     permission === 'restricted' || permission === 'services-disabled';
 
   return (
-    <View style={styles.card}>
+    <View
+      style={[
+        styles.card,
+        { backgroundColor: palette.surface, borderColor: palette.border },
+      ]}
+    >
       <View style={styles.headerRow}>
         <View style={styles.flex}>
-          <Text style={styles.title}>Vị trí của bạn</Text>
-          <Text style={styles.description}>
-            Vị trí chính xác chỉ được gửi tới endpoint của bạn. Nearby chỉ hiển
-            thị khoảng cách gần đúng do backend tính.
+          <Text style={[styles.title, { color: palette.text }]}>
+            {t('nearby.permissionTitle')}
+          </Text>
+          <Text style={[styles.description, { color: palette.muted }]}>
+            {t('nearby.permissionDescription')}
           </Text>
         </View>
         {checking ? (
           <ActivityIndicator
-            accessibilityLabel="Đang kiểm tra quyền vị trí"
-            color={colors.brand}
+            accessibilityLabel={t('nearby.permissionChecking')}
+            color={palette.info}
           />
         ) : (
-          <StatusBadge label={copy.label} tone={copy.tone} />
+          <StatusBadge label={t(copy.labelKey)} tone={copy.tone} />
         )}
       </View>
       {!checking ? (
-        <Text style={styles.description}>{copy.message}</Text>
+        <Text style={[styles.description, { color: palette.muted }]}>
+          {t(copy.messageKey)}
+        </Text>
       ) : null}
       {feedback ? <Text style={styles.success}>{feedback}</Text> : null}
       {update.error ? (
@@ -169,8 +193,8 @@ export function LocationPermissionCard({ scope }: { scope: Scope }) {
       <Button
         label={
           permission === 'granted'
-            ? 'Cập nhật vị trí hiện tại'
-            : 'Cho phép và cập nhật vị trí'
+            ? t('nearby.updateLocation')
+            : t('nearby.allowAndUpdate')
         }
         loading={update.isPending}
         disabled={checking || clear.isPending || settingsRequired}
@@ -181,13 +205,13 @@ export function LocationPermissionCard({ scope }: { scope: Scope }) {
       />
       {settingsRequired ? (
         <Button
-          label="Mở Cài đặt"
+          label={t('nearby.openSettings')}
           variant="secondary"
           onPress={() => void Linking.openSettings()}
         />
       ) : null}
       <Button
-        label="Xóa vị trí đã lưu"
+        label={t('nearby.clearLocation')}
         variant="ghost"
         disabled={update.isPending}
         onPress={() => {
@@ -197,9 +221,9 @@ export function LocationPermissionCard({ scope }: { scope: Scope }) {
       />
       <ConfirmDialog
         visible={clearConfirmVisible}
-        title="Xóa vị trí đã lưu?"
-        message="Nearby sẽ không dùng vị trí này nữa và discovery presence của bạn cũng sẽ được tắt."
-        confirmLabel="Xóa vị trí"
+        title={t('nearby.clearLocationTitle')}
+        message={t('nearby.clearLocationMessage')}
+        confirmLabel={t('nearby.deleteLocation')}
         destructive
         loading={clear.isPending}
         onConfirm={() => clear.mutate()}
@@ -209,12 +233,10 @@ export function LocationPermissionCard({ scope }: { scope: Scope }) {
   );
 }
 
-const visibilityOptions = [1, 6, 12, 24, 48, 72, 168].map((hours) => ({
-  value: String(hours),
-  label: hours === 168 ? '7 ngày' : `${hours} giờ`,
-}));
-
 export function PresenceCard({ scope }: { scope: Scope }) {
+  const { t, locale } = useI18n();
+  const { resolved } = useTheme();
+  const palette = resolved === 'dark' ? colors.dark : colors.light;
   const queryClient = useQueryClient();
   const [duration, setDuration] = useState('24');
   const [now, setNow] = useState(() => Date.now());
@@ -239,42 +261,59 @@ export function PresenceCard({ scope }: { scope: Scope }) {
   });
 
   if (presence.isPending)
-    return <LoadingState label="Đang tải discovery presence…" />;
+    return <LoadingState label={t('nearby.presenceLoading')} />;
+
+  const visibilityOptions = [1, 6, 12, 24, 48, 72, 168].map((hours) => ({
+    value: String(hours),
+    label:
+      hours === 168 ? t('nearby.days') : t('nearby.hour', { count: hours }),
+  }));
 
   const presentation = presencePresentation(presence.data, now);
   const visibleUntil = presence.data?.visibleUntil
-    ? new Date(presence.data.visibleUntil).toLocaleString('vi-VN')
+    ? new Date(presence.data.visibleUntil).toLocaleString(
+        locale === 'en' ? 'en-US' : 'vi-VN',
+      )
     : null;
   const status =
     presentation === 'visible'
       ? {
-          label: 'Đang hiển thị',
+          label: t('nearby.visible'),
           tone: 'success' as const,
-          message: `Hiển thị đến ${visibleUntil}.`,
+          message: t('nearby.visibleUntil', { time: visibleUntil ?? '' }),
         }
       : presentation === 'expired'
         ? {
-            label: 'Đã hết hạn',
+            label: t('nearby.expired'),
             tone: 'warning' as const,
-            message: 'Thời hạn hiển thị đã kết thúc. Bạn có thể đăng lại.',
+            message: t('nearby.expiredMessage'),
           }
         : {
-            label: 'Đang tắt',
+            label: t('nearby.disabled'),
             tone: 'neutral' as const,
-            message: 'Hồ sơ hiện không xuất hiện trong Nearby/discovery.',
+            message: t('nearby.disabledMessage'),
           };
 
   return (
-    <View style={styles.card}>
+    <View
+      style={[
+        styles.card,
+        { backgroundColor: palette.surface, borderColor: palette.border },
+      ]}
+    >
       <View style={styles.headerRow}>
         <View style={styles.flex}>
-          <Text style={styles.title}>Discovery presence</Text>
-          <Text style={styles.description}>{status.message}</Text>
+          <Text style={[styles.title, { color: palette.text }]}>
+            {t('nearby.presenceTitle')}
+          </Text>
+          <Text style={[styles.description, { color: palette.muted }]}>
+            {status.message}
+          </Text>
         </View>
         <StatusBadge label={status.label} tone={status.tone} />
       </View>
       <Select
-        label="Thời gian hiển thị"
+        label={t('nearby.visibilityDuration')}
         value={duration}
         options={visibilityOptions}
         onChange={(value) => setDuration(String(value))}
@@ -290,13 +329,17 @@ export function PresenceCard({ scope }: { scope: Scope }) {
         </Text>
       ) : null}
       <Button
-        label={presentation === 'visible' ? 'Làm mới thời hạn' : 'Bật hiển thị'}
+        label={
+          presentation === 'visible'
+            ? t('nearby.refreshVisibility')
+            : t('nearby.enableVisibility')
+        }
         loading={mutation.isPending}
         onPress={() => mutation.mutate(true)}
       />
       {presentation === 'visible' ? (
         <Button
-          label="Tắt hiển thị"
+          label={t('nearby.disableVisibility')}
           variant="secondary"
           disabled={mutation.isPending}
           onPress={() => mutation.mutate(false)}
@@ -311,9 +354,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.light.border,
     borderRadius: radius.lg,
-    backgroundColor: colors.light.surface,
   },
   headerRow: {
     flexDirection: 'row',
@@ -322,14 +363,12 @@ const styles = StyleSheet.create({
   },
   flex: { flex: 1, gap: spacing.xs },
   title: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 18,
   },
   description: {
-    color: colors.light.muted,
     lineHeight: 20,
   },
-  success: { color: colors.light.success, fontFamily: typography.semibold },
+  success: { fontFamily: typography.semibold },
   error: { color: colors.danger },
 });

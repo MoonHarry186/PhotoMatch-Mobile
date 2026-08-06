@@ -2,6 +2,7 @@ import type {
   OnboardingProgressResponse,
   RoleSummary,
 } from '@/generated/api/types.gen';
+import type { MessageKey } from '@/i18n/messages';
 
 import type { RoleCode } from './onboarding.types';
 
@@ -58,29 +59,29 @@ export function nextOnboardingStep(
   return onboardingSteps[onboardingSteps.indexOf(current) + 1] ?? null;
 }
 
-export const missingLabels: Record<string, string> = {
-  role: 'Vai trò hiện tại',
-  providerChoice: 'Lựa chọn cung cấp dịch vụ',
-  displayName: 'Tên hiển thị',
-  dateOfBirth: 'Ngày sinh',
-  city: 'Thành phố',
-  avatar: 'Ảnh đại diện',
-  location: 'Vị trí hiện tại',
-  activityFields: 'Lĩnh vực hoạt động',
-  services: 'Dịch vụ và nhu cầu',
-  portfolioImages: 'Ít nhất 6 ảnh portfolio',
+export const missingLabelKeys: Record<string, MessageKey> = {
+  role: 'onboarding.missing.role',
+  providerChoice: 'onboarding.missing.providerChoice',
+  displayName: 'onboarding.missing.displayName',
+  dateOfBirth: 'onboarding.missing.dateOfBirth',
+  city: 'onboarding.missing.city',
+  avatar: 'onboarding.missing.avatar',
+  location: 'onboarding.missing.location',
+  activityFields: 'onboarding.missing.activityFields',
+  services: 'onboarding.missing.services',
+  portfolioImages: 'onboarding.missing.portfolioImages',
 };
 
-export const discoveryReasonLabels: Record<string, string> = {
-  account: 'Tài khoản chưa hoạt động',
-  profile: 'Hồ sơ chưa hoạt động',
-  visibility: 'Hồ sơ đang bị ẩn',
-  photographerProfile: 'Thiếu hồ sơ photographer',
-  offeredServices: 'Thiếu dịch vụ cung cấp',
-  portfolioImages: 'Portfolio cần ít nhất 6 ảnh',
-  servicePricing: 'Dịch vụ cung cấp cần đủ khoảng giá VND',
-  penalty: 'Tài khoản đang có hạn chế',
-  role: 'Chưa chọn vai trò',
+export const discoveryReasonLabelKeys: Record<string, MessageKey> = {
+  account: 'onboarding.reason.account',
+  profile: 'onboarding.reason.profile',
+  visibility: 'onboarding.reason.visibility',
+  photographerProfile: 'onboarding.reason.photographerProfile',
+  offeredServices: 'onboarding.reason.offeredServices',
+  portfolioImages: 'onboarding.reason.portfolioImages',
+  servicePricing: 'onboarding.reason.servicePricing',
+  penalty: 'onboarding.reason.penalty',
+  role: 'onboarding.reason.role',
 };
 
 export function canChooseAdditionalRole(

@@ -11,6 +11,7 @@ import { Text } from 'react-native';
 import { Select } from '@/components/ui';
 import { getUserErrorMessage, normalizeError } from '@/core/errors';
 import type { RoleSummary } from '@/generated/api/types.gen';
+import { useI18n } from '@/i18n/i18n-provider';
 import { onboardingApi } from '@/features/onboarding/onboarding.api';
 import { useSession } from '@/providers/session-provider';
 import { useAccountStore } from '@/stores/account.store';
@@ -51,6 +52,7 @@ export function RoleSwitcher({
   const queryClient = useQueryClient();
   const router = useRouter();
   const session = useSession();
+  const { t } = useI18n();
   const [error, setError] = useState<string | null>(null);
   const mutation = useMutation({
     mutationFn: async (nextRoleId: string) => {
@@ -76,11 +78,14 @@ export function RoleSwitcher({
   return (
     <>
       <Select
-        label="Vai trò hiện tại"
+        label={t('role.current')}
         value={currentRoleId ?? undefined}
         options={roles.map((role) => ({
           value: role.id,
-          label: role.code === 'PHOTOGRAPHER' ? 'Photographer' : 'Khách hàng',
+          label:
+            role.code === 'PHOTOGRAPHER'
+              ? t('role.photographer')
+              : t('role.customer'),
         }))}
         onChange={(value) => {
           if (typeof value !== 'string' || value === currentRoleId) return;
@@ -88,7 +93,7 @@ export function RoleSwitcher({
           mutation.mutate(value);
         }}
       />
-      {mutation.isPending ? <Text>Đang chuyển vai trò…</Text> : null}
+      {mutation.isPending ? <Text>{t('role.switching')}</Text> : null}
       {error ? <Text style={{ color: colors.danger }}>{error}</Text> : null}
     </>
   );

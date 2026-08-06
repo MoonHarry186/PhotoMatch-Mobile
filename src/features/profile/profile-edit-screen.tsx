@@ -7,6 +7,7 @@ import { ErrorState, LoadingState } from '@/components/feedback';
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button, Select, TextField } from '@/components/ui';
 import { getUserErrorMessage, normalizeError } from '@/core/errors';
+import { useI18n } from '@/i18n/i18n-provider';
 import { onboardingApi } from '@/features/onboarding/onboarding.api';
 import {
   ActivityFieldsSection,
@@ -17,11 +18,15 @@ import {
   ServicesSection,
 } from '@/features/onboarding/onboarding-sections';
 import { useSession } from '@/providers/session-provider';
+import { useTheme } from '@/providers/theme-provider';
 import { queryKeys } from '@/services/api/query-keys';
 import { colors, radius, spacing, typography } from '@/theme';
 
 export function ProfileEditScreen() {
   const session = useSession();
+  const { t } = useI18n();
+  const { resolved } = useTheme();
+  const palette = resolved === 'dark' ? colors.dark : colors.light;
   const router = useRouter();
   const queryClient = useQueryClient();
   const user = session.snapshot?.user;
@@ -91,12 +96,12 @@ export function ProfileEditScreen() {
 
   if (session.gate === 'signed-out') return <Redirect href="/(auth)/sign-in" />;
   if (!user || !roleId || profile.isPending || progress.isPending)
-    return <LoadingState label="Đang tải hồ sơ chỉnh sửa…" />;
+    return <LoadingState label={t('profile.loading')} />;
   if (profile.isError || progress.isError || !progress.data) {
     return (
       <ErrorState
-        title="Không thể tải hồ sơ"
-        primaryActionLabel="Thử lại"
+        title={t('profile.loadError')}
+        primaryActionLabel={t('common.retry')}
         onPrimaryAction={() => {
           void profile.refetch();
           void progress.refetch();
@@ -114,7 +119,7 @@ export function ProfileEditScreen() {
       years !== undefined &&
       (!Number.isInteger(years) || years < 0 || years > 80)
     ) {
-      setPhotographerError('Số năm kinh nghiệm cần từ 0 đến 80');
+      setPhotographerError(t('profile.experienceRange'));
       return;
     }
     try {
@@ -133,19 +138,26 @@ export function ProfileEditScreen() {
   return (
     <AppScreen>
       <View style={styles.topbar}>
-        <Text accessibilityRole="header" style={styles.title}>
-          Chỉnh sửa hồ sơ
+        <Text
+          accessibilityRole="header"
+          style={[styles.title, { color: palette.text }]}
+        >
+          {t('profile.editTitle')}
         </Text>
-        <Button label="Đóng" variant="ghost" onPress={() => router.back()} />
+        <Button
+          label={t('profile.close')}
+          variant="ghost"
+          onPress={() => router.back()}
+        />
       </View>
-      <View style={styles.section}>
+      <View style={[styles.section, { backgroundColor: palette.surface }]}>
         <PersonalProfileSection
           profile={profile.data}
           scope={resolvedScope}
           onSaved={refresh}
         />
       </View>
-      <View style={styles.section}>
+      <View style={[styles.section, { backgroundColor: palette.surface }]}>
         <AvatarSection
           profile={profile.data}
           scope={resolvedScope}
@@ -154,26 +166,28 @@ export function ProfileEditScreen() {
       </View>
       {role === 'PHOTOGRAPHER' ? (
         <>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Thông tin Photographer</Text>
+          <View style={[styles.section, { backgroundColor: palette.surface }]}>
+            <Text style={[styles.sectionTitle, { color: palette.text }]}>
+              {t('profile.photographerInfo')}
+            </Text>
             <TextField
-              label="Tiêu đề chuyên môn"
+              label={t('profile.headline')}
               value={headline}
               onChangeText={setHeadline}
             />
             <TextField
-              label="Số năm kinh nghiệm"
+              label={t('profile.yearsExperience')}
               keyboardType="number-pad"
               value={yearsExperience}
               onChangeText={setYearsExperience}
             />
             <Select
-              label="Tình trạng nhận lịch"
+              label={t('profile.availability')}
               value={availability}
               options={[
-                { value: 'AVAILABLE', label: 'Sẵn sàng' },
-                { value: 'BUSY', label: 'Đang bận' },
-                { value: 'UNAVAILABLE', label: 'Không nhận lịch' },
+                { value: 'AVAILABLE', label: t('profile.available') },
+                { value: 'BUSY', label: t('profile.busy') },
+                { value: 'UNAVAILABLE', label: t('profile.unavailable') },
               ]}
               onChange={(value) =>
                 setAvailability(value as typeof availability)
@@ -183,19 +197,19 @@ export function ProfileEditScreen() {
               <Text style={styles.error}>{photographerError}</Text>
             ) : null}
             <Button
-              label="Lưu thông tin Photographer"
+              label={t('profile.savePhotographer')}
               loading={photographerMutation.isPending}
               onPress={() => void savePhotographer()}
             />
           </View>
-          <View style={styles.section}>
+          <View style={[styles.section, { backgroundColor: palette.surface }]}>
             <ActivityFieldsSection
               scope={resolvedScope}
               role="PHOTOGRAPHER"
               onSaved={refresh}
             />
           </View>
-          <View style={styles.section}>
+          <View style={[styles.section, { backgroundColor: palette.surface }]}>
             <ServicesSection
               scope={resolvedScope}
               role="PHOTOGRAPHER"
@@ -203,30 +217,37 @@ export function ProfileEditScreen() {
             />
           </View>
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Portfolio</Text>
-            <Text style={styles.muted}>
-              Thêm tối thiểu 6 ảnh để hồ sơ đủ điều kiện xuất hiện trong Khám
-              phá.
+            <Text style={[styles.sectionTitle, { color: palette.text }]}>
+              {t('profile.portfolio')}
+            </Text>
+            <Text style={[styles.muted, { color: palette.muted }]}>
+              {t('profile.portfolioRequirement')}
             </Text>
             <Button
-              label="Quản lý portfolio"
+              label={t('profile.managePortfolio')}
               variant="secondary"
               onPress={() => router.push('/(details)/profile/portfolio')}
             />
           </View>
         </>
       ) : null}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quyền riêng tư và vị trí</Text>
+      <View style={[styles.section, { backgroundColor: palette.surface }]}>
+        <Text style={[styles.sectionTitle, { color: palette.text }]}>
+          {t('profile.privacyLocation')}
+        </Text>
         <View style={styles.switchRow}>
           <View style={styles.flex}>
-            <Text style={styles.cardTitle}>Hiển thị hồ sơ</Text>
-            <Text style={styles.muted}>
-              Tắt mục này sẽ làm hồ sơ không đủ điều kiện Khám phá.
+            <Text style={[styles.cardTitle, { color: palette.text }]}>
+              {t('profile.profileVisibility')}
+            </Text>
+            <Text style={[styles.muted, { color: palette.muted }]}>
+              {t('profile.profileVisibilityDescription')}
             </Text>
           </View>
           <Switch
-            accessibilityLabel="Hiển thị hồ sơ"
+            accessibilityLabel={t('profile.profileVisibility')}
+            trackColor={{ false: palette.border, true: palette.success }}
+            thumbColor={palette.surface}
             disabled={visibilityMutation.isPending}
             value={settings.data?.profileVisibilityEnabled ?? false}
             onValueChange={(value) => visibilityMutation.mutate(value)}
@@ -249,12 +270,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   title: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 28,
   },
   sectionTitle: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 20,
   },
@@ -262,7 +281,6 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
     padding: spacing.lg,
     borderRadius: radius.lg,
-    backgroundColor: '#FFFFFF',
   },
   switchRow: {
     minHeight: 64,
@@ -271,7 +289,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   flex: { flex: 1 },
-  cardTitle: { color: colors.light.text, fontFamily: typography.semibold },
-  muted: { color: colors.light.muted },
+  cardTitle: { fontFamily: typography.semibold },
+  muted: {},
   error: { color: colors.danger },
 });

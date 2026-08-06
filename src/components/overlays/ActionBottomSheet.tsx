@@ -1,6 +1,8 @@
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useOptionalI18n } from '@/i18n/i18n-provider';
+import { messages } from '@/i18n/messages';
 import { useTheme } from '@/providers/theme-provider';
 import { colors, radius, spacing, typography } from '@/theme';
 
@@ -28,6 +30,8 @@ export function ActionBottomSheet({
   onDismiss: () => void;
 }) {
   const insets = useSafeAreaInsets();
+  const i18n = useOptionalI18n();
+  const closeLabel = i18n?.t('common.close') ?? messages.vi['common.close'];
   const { resolved } = useTheme();
   const palette = resolved === 'dark' ? colors.dark : colors.light;
   return (
@@ -42,7 +46,7 @@ export function ActionBottomSheet({
     >
       <View style={styles.host}>
         <Pressable
-          accessibilityLabel="Đóng bảng lựa chọn"
+          accessibilityLabel={closeLabel}
           disabled={!dismissible}
           style={styles.backdrop}
           onPress={onDismiss}
@@ -83,7 +87,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    backgroundColor: 'rgba(2,6,23,0.56)',
+    backgroundColor: colors.discovery.scrimSoft,
   },
   sheet: {
     borderTopLeftRadius: radius.sheet,

@@ -44,7 +44,7 @@ export function DiscoveryHeader({
             web: 'tune',
           }}
           size={23}
-          tintColor={activeFilterCount ? colors.brand : '#FFFFFF'}
+          tintColor={activeFilterCount ? colors.brand : colors.onBrand}
         />
       </Pressable>
 
@@ -127,14 +127,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: radius.full,
   },
-  tabSelected: { backgroundColor: 'rgba(20, 20, 20, 0.72)' },
+  tabSelected: { backgroundColor: colors.discovery.cardScrim },
   tabLabel: {
-    color: 'rgba(255, 255, 255, 0.76)',
+    color: colors.discovery.whiteStrong,
     fontFamily: typography.medium,
     fontSize: 16,
   },
   tabLabelSelected: {
-    color: '#FFFFFF',
+    color: colors.onBrand,
     fontFamily: typography.semibold,
   },
   trailingSpacer: { width: 44, height: 44 },

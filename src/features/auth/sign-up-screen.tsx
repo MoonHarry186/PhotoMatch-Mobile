@@ -15,6 +15,7 @@ import {
 } from '@/core/errors';
 import { useI18n } from '@/i18n/i18n-provider';
 import { colors, spacing, typography } from '@/theme';
+import { useOptionalTheme } from '@/providers/theme-provider';
 
 import { authApi } from './auth.api';
 import { AuthHeader } from './auth-header';
@@ -26,6 +27,8 @@ type Form = z.infer<ReturnType<typeof createSignUpSchema>>;
 export function SignUpScreen() {
   const router = useRouter();
   const { locale, t } = useI18n();
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
   const schema = useMemo(() => createSignUpSchema(t), [t]);
   const {
     control,
@@ -139,7 +142,9 @@ export function SignUpScreen() {
         )}
       />
       {errors.root?.message ? (
-        <Text style={styles.error}>{errors.root.message}</Text>
+        <Text style={[styles.error, { color: palette.error }]}>
+          {errors.root.message}
+        </Text>
       ) : null}
       <Button
         label={t('auth.signUp')}
@@ -147,7 +152,9 @@ export function SignUpScreen() {
         onPress={() => void submit()}
       />
       <View style={styles.accountRow}>
-        <Text style={styles.accountPrompt}>{t('auth.alreadyHaveAccount')}</Text>
+        <Text style={[styles.accountPrompt, { color: palette.text }]}>
+          {t('auth.alreadyHaveAccount')}
+        </Text>
         <Link href="/(auth)/sign-in" asChild>
           <Pressable
             testID="sign-in-link"
@@ -166,7 +173,7 @@ export function SignUpScreen() {
 }
 
 const styles = StyleSheet.create({
-  error: { color: '#B91C1C' },
+  error: {},
   accountRow: {
     minHeight: 44,
     flexDirection: 'row',
@@ -175,7 +182,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   accountPrompt: {
-    color: colors.light.text,
     fontFamily: typography.regular,
     fontSize: 14,
   },

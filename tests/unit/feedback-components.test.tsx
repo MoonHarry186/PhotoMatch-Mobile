@@ -81,6 +81,7 @@ import {
 } from '@/components/feedback';
 import { UploadThumbnail } from '@/components/media/media-components';
 import { ThemeProvider } from '@/providers/theme-provider';
+import { I18nProvider } from '@/i18n/i18n-provider';
 
 let mockIsOnline = false;
 const mockRefresh = jest.fn();
@@ -100,7 +101,9 @@ function Wrapper({ children }: React.PropsWithChildren) {
         insets: { top: 44, left: 0, right: 0, bottom: 34 },
       }}
     >
-      <ThemeProvider>{children}</ThemeProvider>
+      <I18nProvider initialLocale="vi">
+        <ThemeProvider>{children}</ThemeProvider>
+      </I18nProvider>
     </SafeAreaProvider>
   );
 }

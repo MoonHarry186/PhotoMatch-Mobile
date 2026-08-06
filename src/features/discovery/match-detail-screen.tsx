@@ -15,6 +15,7 @@ import { getUserErrorMessage, normalizeError } from '@/core/errors';
 import { useI18n } from '@/i18n/i18n-provider';
 import { createSubmissionKey } from '@/services/api/idempotency';
 import { queryKeys } from '@/services/api/query-keys';
+import { useOptionalTheme } from '@/providers/theme-provider';
 import { colors, elevation, radius, spacing, typography } from '@/theme';
 
 import { discoveryApi } from './discovery.api';
@@ -29,6 +30,8 @@ export function MatchDetailScreen({
   scope: { userId: string; roleId: string };
 }) {
   const { locale, t } = useI18n();
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
   const router = useRouter();
   const queryClient = useQueryClient();
   const [reason, setReason] = useState('');
@@ -92,16 +95,21 @@ export function MatchDetailScreen({
           tone={value.status === 'ACTIVE' ? 'success' : 'neutral'}
         />
       </View>
-      <View style={styles.card}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
+      <View style={[styles.card, { backgroundColor: palette.surface }]}>
+        <View
+          style={[styles.avatar, { backgroundColor: palette.infoContainer }]}
+        >
+          <Text style={[styles.avatarText, { color: palette.info }]}>
             {(value.counterpart.displayName ?? 'P').slice(0, 1).toUpperCase()}
           </Text>
         </View>
-        <Text accessibilityRole="header" style={styles.title}>
+        <Text
+          accessibilityRole="header"
+          style={[styles.title, { color: palette.text }]}
+        >
           {name}
         </Text>
-        <Text style={styles.meta}>
+        <Text style={[styles.meta, { color: palette.muted }]}>
           {t('discovery.match.matchedAt', {
             date: new Date(value.matchedAt).toLocaleString(
               locale === 'vi' ? 'vi-VN' : 'en-US',
@@ -109,7 +117,7 @@ export function MatchDetailScreen({
           })}
         </Text>
         {value.endedAt ? (
-          <Text style={styles.meta}>
+          <Text style={[styles.meta, { color: palette.muted }]}>
             {t('discovery.match.endedAt', {
               date: new Date(value.endedAt).toLocaleString(
                 locale === 'vi' ? 'vi-VN' : 'en-US',
@@ -118,7 +126,7 @@ export function MatchDetailScreen({
           </Text>
         ) : null}
         {value.endReason ? (
-          <Text style={styles.meta}>
+          <Text style={[styles.meta, { color: palette.muted }]}>
             {t('discovery.match.reason', { reason: value.endReason })}
           </Text>
         ) : null}
@@ -156,11 +164,23 @@ export function MatchDetailScreen({
         />
       ) : null}
       {value.status === 'ACTIVE' ? (
-        <View style={styles.dangerZone}>
-          <Text style={styles.sectionTitle}>
+        <View
+          style={[
+            styles.dangerZone,
+            {
+              borderColor: palette.error,
+              backgroundColor: palette.errorContainer,
+            },
+          ]}
+        >
+          <Text
+            style={[styles.sectionTitle, { color: palette.onErrorContainer }]}
+          >
             {t('discovery.match.endTitle')}
           </Text>
-          <Text style={styles.meta}>{t('discovery.match.endMessage')}</Text>
+          <Text style={[styles.meta, { color: palette.muted }]}>
+            {t('discovery.match.endMessage')}
+          </Text>
           <TextField
             label={t('discovery.match.reasonLabel')}
             value={reason}
@@ -169,7 +189,10 @@ export function MatchDetailScreen({
             onChangeText={setReason}
           />
           {error ? (
-            <Text accessibilityRole="alert" style={styles.error}>
+            <Text
+              accessibilityRole="alert"
+              style={[styles.error, { color: palette.error }]}
+            >
               {relationshipErrorMessage(error, locale) ??
                 getUserErrorMessage(error, locale)}
             </Text>
@@ -182,7 +205,9 @@ export function MatchDetailScreen({
           />
         </View>
       ) : (
-        <Text style={styles.closed}>{t('discovery.match.closedMessage')}</Text>
+        <Text style={[styles.closed, { color: palette.muted }]}>
+          {t('discovery.match.closedMessage')}
+        </Text>
       )}
 
       <ConfirmDialog
@@ -214,7 +239,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.xl,
     borderRadius: radius.xl,
-    backgroundColor: colors.light.surface,
     ...elevation.card,
   },
   avatar: {
@@ -223,36 +247,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 44,
-    backgroundColor: colors.light.infoContainer,
   },
   avatarText: {
-    color: colors.brand,
     fontFamily: typography.bold,
     fontSize: 34,
   },
   title: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 24,
     textAlign: 'center',
   },
-  meta: { color: colors.light.muted, lineHeight: 21 },
+  meta: { lineHeight: 21 },
   dangerZone: {
     gap: spacing.md,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.light.error,
     borderRadius: radius.lg,
-    backgroundColor: colors.light.errorContainer,
   },
   sectionTitle: {
-    color: colors.light.onErrorContainer,
     fontFamily: typography.bold,
     fontSize: 18,
   },
-  error: { color: colors.danger },
+  error: {},
   closed: {
-    color: colors.light.muted,
     lineHeight: 21,
     textAlign: 'center',
   },

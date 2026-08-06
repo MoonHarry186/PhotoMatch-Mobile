@@ -92,7 +92,7 @@ export function FilterChip({
         <Text
           style={[
             styles.chipLabel,
-            { color: isService || !selected ? palette.text : '#FFFFFF' },
+            { color: isService || !selected ? palette.text : colors.onBrand },
           ]}
         >
           {label}
@@ -139,7 +139,7 @@ export function FilterSwitch({
               <SymbolView
                 name={icon}
                 size={17}
-                tintColor={value ? '#FFFFFF' : palette.muted}
+                tintColor={value ? colors.onBrand : palette.muted}
               />
             </View>
             <Text style={[styles.switchLabel, { color: palette.text }]}>

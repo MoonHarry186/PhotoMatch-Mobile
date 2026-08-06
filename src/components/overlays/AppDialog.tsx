@@ -7,6 +7,9 @@ import {
   useTheme,
 } from 'react-native-paper';
 
+import { useOptionalI18n } from '@/i18n/i18n-provider';
+import { messages } from '@/i18n/messages';
+
 export interface AppDialogProps {
   visible: boolean;
   title: string;
@@ -24,12 +27,15 @@ export function AppDialog({
   title,
   description,
   confirmLabel,
-  cancelLabel = 'Hủy',
+  cancelLabel,
   destructive,
   loading,
   onConfirm,
   onCancel,
 }: AppDialogProps) {
+  const i18n = useOptionalI18n();
+  const resolvedCancelLabel =
+    cancelLabel ?? i18n?.t('common.cancel') ?? messages.vi['common.cancel'];
   const theme = useTheme();
   return (
     <Portal>
@@ -40,7 +46,7 @@ export function AppDialog({
         </Dialog.Content>
         <Dialog.Actions>
           <Button disabled={loading} onPress={onCancel}>
-            {cancelLabel}
+            {resolvedCancelLabel}
           </Button>
           <Button
             disabled={loading}

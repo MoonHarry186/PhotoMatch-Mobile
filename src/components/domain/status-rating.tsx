@@ -1,5 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useOptionalI18n } from '@/i18n/i18n-provider';
+import { useOptionalTheme } from '@/providers/theme-provider';
 import { colors, radius, spacing, typography } from '@/theme';
 
 export function StatusBadge({
@@ -9,9 +11,27 @@ export function StatusBadge({
   label: string;
   tone?: 'neutral' | 'success' | 'warning' | 'danger';
 }) {
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
+  const toneColors = {
+    neutral: { backgroundColor: palette.surfaceVariant, color: palette.text },
+    success: {
+      backgroundColor: palette.successContainer,
+      color: palette.success,
+    },
+    warning: {
+      backgroundColor: palette.warningContainer,
+      color: palette.warning,
+    },
+    danger: { backgroundColor: palette.errorContainer, color: palette.error },
+  }[tone];
   return (
-    <View style={[styles.badge, styles[tone]]}>
-      <Text style={styles.badgeText}>● {label}</Text>
+    <View
+      style={[styles.badge, { backgroundColor: toneColors.backgroundColor }]}
+    >
+      <Text style={[styles.badgeText, { color: toneColors.color }]}>
+        ● {label}
+      </Text>
     </View>
   );
 }
@@ -25,20 +45,32 @@ export function RatingInput({
   onChange: (value: number) => void;
   disabled?: boolean;
 }) {
+  const i18n = useOptionalI18n();
+  const t = i18n?.t ?? ((key: 'common.ratingStars') => key);
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
   return (
     <View accessibilityRole="radiogroup" style={styles.ratingRow}>
       {[1, 2, 3, 4, 5].map((rating) => (
         <Pressable
           key={rating}
           accessibilityRole="radio"
-          accessibilityLabel={`${rating} sao`}
+          accessibilityLabel={t('common.ratingStars').replace(
+            '{rating}',
+            String(rating),
+          )}
           accessibilityState={{ checked: value === rating, disabled }}
           disabled={disabled}
           hitSlop={6}
           onPress={() => onChange(rating)}
           style={styles.starButton}
         >
-          <Text style={[styles.star, rating <= value && styles.starActive]}>
+          <Text
+            style={[
+              styles.star,
+              { color: rating <= value ? palette.warning : palette.border },
+            ]}
+          >
             ★
           </Text>
         </Pressable>
@@ -54,9 +86,18 @@ export function RatingSummary({
   value: number;
   count: number;
 }) {
+  const i18n = useOptionalI18n();
+  const t = i18n?.t ?? ((key: 'common.ratingSummary') => key);
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
   return (
-    <Text accessibilityLabel={`${value} trên 5 sao từ ${count} đánh giá`}>
-      <Text style={styles.starActive}>★</Text> {value.toFixed(1)} · {count}
+    <Text
+      accessibilityLabel={t('common.ratingSummary')
+        .replace('{value}', value.toFixed(1))
+        .replace('{count}', String(count))}
+    >
+      <Text style={{ color: palette.warning }}>★</Text> {value.toFixed(1)} ·{' '}
+      {count}
     </Text>
   );
 }
@@ -70,11 +111,13 @@ export function ReviewCard({
   rating: number;
   comment?: string | null;
 }) {
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
   return (
-    <View style={styles.card}>
-      <Text style={styles.author}>{author}</Text>
+    <View style={[styles.card, { backgroundColor: palette.surface }]}>
+      <Text style={[styles.author, { color: palette.text }]}>{author}</Text>
       <RatingSummary value={rating} count={1} />
-      {comment ? <Text>{comment}</Text> : null}
+      {comment ? <Text style={{ color: palette.text }}>{comment}</Text> : null}
     </View>
   );
 }
@@ -86,11 +129,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: radius.full,
   },
-  neutral: { backgroundColor: '#E2E8F0' },
-  success: { backgroundColor: '#DCFCE7' },
-  warning: { backgroundColor: '#FEF3C7' },
-  danger: { backgroundColor: '#FEE2E2' },
-  badgeText: { fontFamily: typography.medium, color: colors.light.text },
+  badgeText: { fontFamily: typography.medium },
   ratingRow: { flexDirection: 'row' },
   starButton: {
     width: 44,
@@ -98,11 +137,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  star: { color: '#CBD5E1', fontSize: 30 },
-  starActive: { color: '#F59E0B' },
+  star: { fontSize: 30 },
+  starActive: {},
   card: {
     padding: spacing.lg,
-    backgroundColor: '#FFFFFF',
     borderRadius: radius.md,
     gap: spacing.sm,
   },

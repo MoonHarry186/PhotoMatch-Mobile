@@ -35,21 +35,24 @@ import type {
   ServiceSelectionDto,
   UserSummary,
 } from '@/generated/api/types.gen';
+import { useI18n } from '@/i18n/i18n-provider';
+import type { Locale } from '@/i18n/messages';
 import { queryKeys } from '@/services/api/query-keys';
+import { useTheme } from '@/providers/theme-provider';
 import { colors, radius, spacing, typography } from '@/theme';
 
 import { onboardingApi, uploadAndAttachAvatar } from './onboarding.api';
 import {
   canChooseAdditionalRole,
-  discoveryReasonLabels,
+  discoveryReasonLabelKeys,
   findRole,
   invalidCatalogSelection,
-  missingLabels,
+  missingLabelKeys,
   portfolioWarning,
 } from './onboarding.model';
 import {
-  personalProfileSchema,
-  servicesSchema,
+  createPersonalProfileSchema,
+  createServicesSchema,
   type PersonalProfileForm,
   type ServicesForm,
 } from './onboarding.schemas';
@@ -58,10 +61,9 @@ import type { RoleCode, SelfProfile } from './onboarding.types';
 type Scope = { userId: string; roleId?: string | null };
 type ResolvedScope = { userId: string; roleId: string };
 
-function actionErrorMessage(caught: unknown) {
-  if (caught instanceof AppError) return getUserErrorMessage(caught);
-  if (caught instanceof Error && caught.message) return caught.message;
-  return getUserErrorMessage(normalizeError(caught));
+function actionErrorMessage(caught: unknown, locale: Locale) {
+  if (caught instanceof AppError) return getUserErrorMessage(caught, locale);
+  return getUserErrorMessage(normalizeError(caught), locale);
 }
 
 function SectionHeader({
@@ -71,18 +73,34 @@ function SectionHeader({
   title: string;
   description: string;
 }) {
+  const { resolved } = useTheme();
+  const palette = resolved === 'dark' ? colors.dark : colors.light;
   return (
     <View style={styles.header}>
-      <Text accessibilityRole="header" style={styles.title}>
+      <Text
+        accessibilityRole="header"
+        style={[styles.title, { color: palette.text }]}
+      >
         {title}
       </Text>
-      <Text style={styles.description}>{description}</Text>
+      <Text style={[styles.description, { color: palette.muted }]}>
+        {description}
+      </Text>
     </View>
   );
 }
 
 function FormError({ message }: { message?: string | null }) {
-  return message ? <Text style={styles.error}>{message}</Text> : null;
+  const { resolved } = useTheme();
+  const palette = resolved === 'dark' ? colors.dark : colors.light;
+  return message ? (
+    <Text style={[styles.error, { color: palette.error }]}>{message}</Text>
+  ) : null;
+}
+
+function useOnboardingPalette() {
+  const { resolved } = useTheme();
+  return resolved === 'dark' ? colors.dark : colors.light;
 }
 
 function parseDateOnly(value?: string | null): Date | null {
@@ -108,6 +126,8 @@ export function PersonalProfileSection({
   scope: Scope;
   onSaved: () => Promise<void> | void;
 }) {
+  const { locale, t } = useI18n();
+  const schema = useMemo(() => createPersonalProfileSchema(t), [t]);
   const cities = useQuery({
     queryKey: queryKeys.public('cities'),
     queryFn: onboardingApi.cities,
@@ -120,7 +140,7 @@ export function PersonalProfileSection({
     setError,
     formState: { errors, isSubmitting },
   } = useForm<PersonalProfileForm>({
-    resolver: zodResolver(personalProfileSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       displayName: profile?.displayName ?? '',
       dateOfBirth: profile?.dateOfBirth?.slice(0, 10) ?? '',
@@ -169,22 +189,22 @@ export function PersonalProfileSection({
           setError(field, { message });
         }
       });
-      setError('root', { message: getUserErrorMessage(error) });
+      setError('root', { message: getUserErrorMessage(error, locale) });
     }
   });
 
   return (
     <>
       <SectionHeader
-        title="Thông tin của bạn"
-        description="Cho mọi người biết họ đang kết nối với ai. Bạn có thể cập nhật lại các thông tin này sau."
+        title={t('onboarding.personalTitle')}
+        description={t('onboarding.personalDescription')}
       />
       <Controller
         control={control}
         name="displayName"
         render={({ field }) => (
           <TextField
-            label="Tên hiển thị"
+            label={t('onboarding.displayName')}
             value={field.value}
             onChangeText={field.onChange}
             onBlur={field.onBlur}
@@ -197,11 +217,11 @@ export function PersonalProfileSection({
         name="dateOfBirth"
         render={({ field }) => (
           <DateTimeField
-            label="Ngày sinh"
+            label={t('onboarding.birthDate')}
             value={parseDateOnly(field.value)}
             minimumDate={birthDateLimits.minimum}
             maximumDate={birthDateLimits.maximum}
-            placeholder="Chọn ngày sinh"
+            placeholder={t('onboarding.chooseBirthDate')}
             onChange={(value) => field.onChange(formatDateOnly(value))}
             error={errors.dateOfBirth?.message}
           />
@@ -212,7 +232,7 @@ export function PersonalProfileSection({
         name="cityId"
         render={({ field }) => (
           <Select
-            label="Thành phố"
+            label={t('onboarding.city')}
             value={field.value}
             options={(cities.data ?? []).map((city) => ({
               value: city.id,
@@ -228,8 +248,8 @@ export function PersonalProfileSection({
         name="bio"
         render={({ field }) => (
           <TextField
-            label="Giới thiệu (không bắt buộc)"
-            placeholder="Chia sẻ đôi chút về bạn, sở thích hoặc phong cách bạn đang tìm kiếm…"
+            label={t('onboarding.bio')}
+            placeholder={t('onboarding.bioPlaceholder')}
             multiline
             numberOfLines={5}
             maxLength={1000}
@@ -242,7 +262,7 @@ export function PersonalProfileSection({
       />
       <FormError message={errors.root?.message} />
       <Button
-        label="Lưu và tiếp tục"
+        label={t('onboarding.saveContinue')}
         loading={isSubmitting || mutation.isPending}
         onPress={() => void submit()}
       />
@@ -263,6 +283,8 @@ export function AvatarSection({
   onSkip?: () => void;
   showContinue?: boolean;
 }) {
+  const { locale, t } = useI18n();
+  const palette = useOnboardingPalette();
   const queryClient = useQueryClient();
   const avatarUrl = useQuery({
     queryKey: profile?.avatarAssetId
@@ -289,7 +311,7 @@ export function AvatarSection({
       });
     } catch (caught) {
       setStatus('failed');
-      setError(actionErrorMessage(caught));
+      setError(actionErrorMessage(caught, locale));
     }
   };
   const finish = async () => {
@@ -298,7 +320,7 @@ export function AvatarSection({
       setIsFinishing(true);
       await onSaved();
     } catch (caught) {
-      setError(actionErrorMessage(caught));
+      setError(actionErrorMessage(caught, locale));
     } finally {
       setIsFinishing(false);
     }
@@ -307,10 +329,18 @@ export function AvatarSection({
   return (
     <>
       <SectionHeader
-        title="Ảnh đại diện"
-        description="Ảnh đại diện là bắt buộc để xây dựng trải nghiệm an toàn và đáng tin cậy."
+        title={t('onboarding.avatarTitle')}
+        description={t('onboarding.avatarDescription')}
       />
-      <View style={styles.avatarCard}>
+      <View
+        style={[
+          styles.avatarCard,
+          {
+            borderColor: palette.border,
+            backgroundColor: palette.surfaceVariant,
+          },
+        ]}
+      >
         <AvatarPicker
           uri={picked?.uri ?? avatarUrl.data}
           uploading={status === 'uploading'}
@@ -326,8 +356,8 @@ export function AvatarSection({
             setSettingsRequired(!canAskAgain);
             setError(
               canAskAgain
-                ? 'PhotoMatch cần quyền truy cập ảnh để chọn ảnh đại diện.'
-                : 'Quyền truy cập ảnh đang bị tắt. Hãy bật lại trong Cài đặt.',
+                ? t('onboarding.photoPermission')
+                : t('onboarding.photoPermissionSettings'),
             );
           }}
         />
@@ -337,7 +367,7 @@ export function AvatarSection({
         <View style={styles.row}>
           <View style={styles.flex}>
             <Button
-              label="Thử tải lại"
+              label={t('onboarding.retryUpload')}
               variant="secondary"
               onPress={() => void upload(picked)}
             />
@@ -345,7 +375,7 @@ export function AvatarSection({
           {profile?.avatarAssetId ? (
             <View style={styles.flex}>
               <Button
-                label="Giữ ảnh hiện tại"
+                label={t('onboarding.keepCurrent')}
                 variant="ghost"
                 onPress={() => {
                   setPicked(null);
@@ -360,24 +390,28 @@ export function AvatarSection({
       ) : null}
       {settingsRequired ? (
         <Button
-          label="Mở Cài đặt"
+          label={t('common.openSettings')}
           variant="secondary"
           onPress={() => void Linking.openSettings()}
         />
       ) : null}
       {onSkip ? (
-        <Button label="Bổ sung sau" variant="ghost" onPress={onSkip} />
+        <Button
+          label={t('onboarding.addLater')}
+          variant="ghost"
+          onPress={onSkip}
+        />
       ) : null}
       {picked && status === 'uploaded' ? (
         <Button
-          label="Xong, tiếp tục"
+          label={t('onboarding.doneContinue')}
           loading={isFinishing}
           onPress={() => void finish()}
         />
       ) : null}
       {showContinue && profile?.avatarAssetId && !picked ? (
         <Button
-          label="Tiếp tục"
+          label={t('onboarding.continue')}
           loading={isFinishing}
           onPress={() => void finish()}
         />
@@ -393,6 +427,8 @@ export function ProviderChoiceSection({
   user: UserSummary;
   onSelected: (role: RoleCode) => Promise<void> | void;
 }) {
+  const { locale, t } = useI18n();
+  const palette = useOnboardingPalette();
   const mutation = useMutation({
     mutationFn: async (becomeProvider: boolean) => {
       const role: RoleCode = becomeProvider ? 'PHOTOGRAPHER' : 'CUSTOMER';
@@ -406,8 +442,8 @@ export function ProviderChoiceSection({
       if (!selected) {
         throw new Error(
           becomeProvider
-            ? 'Không thể thêm vai trò Photographer cho tài khoản này'
-            : 'Không tìm thấy vai trò Customer mặc định',
+            ? t('onboarding.providerRoleError')
+            : t('onboarding.customerRoleError'),
         );
       }
       await onboardingApi.switchRole(selected.id);
@@ -422,42 +458,61 @@ export function ProviderChoiceSection({
       const role = await mutation.mutateAsync(becomeProvider);
       await onSelected(role);
     } catch (caught) {
-      setError(actionErrorMessage(caught));
+      setError(actionErrorMessage(caught, locale));
     }
   };
 
   return (
     <>
       <SectionHeader
-        title="Bạn có muốn cung cấp dịch vụ?"
-        description="Mọi tài khoản đều có thể tìm Photographer. Chọn cung cấp dịch vụ nếu bạn muốn xây dựng hồ sơ Photographer của riêng mình."
+        title={t('onboarding.providerQuestion')}
+        description={t('onboarding.providerDescription')}
       />
       <Pressable
         accessibilityRole="button"
         disabled={mutation.isPending}
         onPress={() => void choose(true)}
-        style={[styles.roleCard, styles.providerCard]}
+        style={[
+          styles.roleCard,
+          styles.providerCard,
+          { borderColor: colors.brand, backgroundColor: palette.infoContainer },
+        ]}
       >
-        <Text style={styles.roleEyebrow}>DÀNH CHO PHOTOGRAPHER</Text>
-        <Text style={styles.cardTitle}>Có, tôi muốn cung cấp dịch vụ</Text>
-        <Text style={styles.description}>
-          Bắt đầu với vai trò Photographer và thiết lập dịch vụ sau khi vào ứng
-          dụng.
+        <Text style={styles.roleEyebrow}>
+          {t('onboarding.providerEyebrow')}
+        </Text>
+        <Text style={[styles.cardTitle, { color: palette.text }]}>
+          {t('onboarding.becomeProvider')}
+        </Text>
+        <Text style={[styles.description, { color: palette.muted }]}>
+          {t('onboarding.becomeProviderDescription')}
         </Text>
       </Pressable>
       <Pressable
         accessibilityRole="button"
         disabled={mutation.isPending}
         onPress={() => void choose(false)}
-        style={styles.roleCard}
+        style={[
+          styles.roleCard,
+          { borderColor: palette.border, backgroundColor: palette.surface },
+        ]}
       >
-        <Text style={styles.cardTitle}>Để sau, tôi đang tìm Photographer</Text>
-        <Text style={styles.description}>
-          Tiếp tục với vai trò Customer mặc định.
+        <Text style={[styles.cardTitle, { color: palette.text }]}>
+          {t('onboarding.stayCustomer')}
+        </Text>
+        <Text style={[styles.description, { color: palette.muted }]}>
+          {t('onboarding.stayCustomerDescription')}
         </Text>
       </Pressable>
       {mutation.isPending ? (
-        <Text style={styles.note}>Đang hoàn tất onboarding…</Text>
+        <Text
+          style={[
+            styles.note,
+            { color: palette.muted, backgroundColor: palette.surfaceVariant },
+          ]}
+        >
+          {t('onboarding.completing')}
+        </Text>
       ) : null}
       <FormError message={error} />
     </>
@@ -473,6 +528,7 @@ export function ActivityFieldsSection({
   role: RoleCode;
   onSaved: () => Promise<void> | void;
 }) {
+  const { locale, t } = useI18n();
   const catalog = useQuery({
     queryKey: queryKeys.public('activity-fields', { role }),
     queryFn: () => onboardingApi.fieldsForRole(role),
@@ -492,11 +548,11 @@ export function ActivityFieldsSection({
   return (
     <>
       <SectionHeader
-        title="Lĩnh vực hoạt động"
-        description="Danh mục được lọc theo vai trò hiện tại và được lưu thay thế nguyên tử."
+        title={t('onboarding.activityTitle')}
+        description={t('onboarding.activityDescription')}
       />
       <MultiSelect
-        label="Chọn một hoặc nhiều lĩnh vực"
+        label={t('onboarding.activitySelect')}
         options={(catalog.data ?? []).map((item) => ({
           value: item.id,
           label: item.name,
@@ -506,11 +562,11 @@ export function ActivityFieldsSection({
         error={error ?? undefined}
       />
       <Button
-        label="Lưu và tiếp tục"
+        label={t('onboarding.saveContinue')}
         loading={mutation.isPending}
         onPress={() => {
           if (!values.length) {
-            setError('Chọn ít nhất một lĩnh vực');
+            setError(t('onboarding.activityRequired'));
             return;
           }
           if (
@@ -519,9 +575,7 @@ export function ActivityFieldsSection({
               (catalog.data ?? []).map((item) => item.id),
             ).length
           ) {
-            setError(
-              'Danh mục vừa thay đổi. Vui lòng bỏ lựa chọn không còn hợp lệ.',
-            );
+            setError(t('onboarding.catalogChanged'));
             void catalog.refetch();
             return;
           }
@@ -530,7 +584,7 @@ export function ActivityFieldsSection({
             .mutateAsync()
             .then(onSaved)
             .catch((caught) =>
-              setError(getUserErrorMessage(normalizeError(caught))),
+              setError(getUserErrorMessage(normalizeError(caught), locale)),
             );
         }}
       />
@@ -554,6 +608,9 @@ export function ServicesSection({
   role: RoleCode;
   onSaved: () => Promise<void> | void;
 }) {
+  const { locale, t } = useI18n();
+  const schema = useMemo(() => createServicesSchema(t), [t]);
+  const palette = useOnboardingPalette();
   const fields = useQuery({
     queryKey: queryKeys.activityFields(scope),
     queryFn: () => onboardingApi.selectedFields(scope.roleId),
@@ -613,9 +670,9 @@ export function ServicesSection({
         ...(draft.unit ? { priceUnit: draft.unit } : {}),
       };
     });
-    const parsed = servicesSchema.safeParse({ services });
+    const parsed = schema.safeParse({ services });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Dữ liệu chưa hợp lệ');
+      setError(t('onboarding.invalidData'));
       return;
     }
     try {
@@ -623,18 +680,18 @@ export function ServicesSection({
       await mutation.mutateAsync(parsed.data.services);
       await onSaved();
     } catch (caught) {
-      setError(actionErrorMessage(caught));
+      setError(actionErrorMessage(caught, locale));
     }
   };
 
   return (
     <>
       <SectionHeader
-        title="Dịch vụ và mức giá"
-        description="Dịch vụ phải thuộc lĩnh vực đã chọn. Đơn vị tiền tệ được cố định là VND."
+        title={t('onboarding.servicesTitle')}
+        description={t('onboarding.servicesDescription')}
       />
       <MultiSelect
-        label="Dịch vụ"
+        label={t('onboarding.service')}
         options={(catalog.data ?? []).map((item) => ({
           value: item.id,
           label: item.name,
@@ -646,17 +703,25 @@ export function ServicesSection({
         const service = catalog.data?.find((item) => item.id === id);
         const draft = draftFor(id);
         return (
-          <View key={id} style={styles.serviceCard}>
-            <Text style={styles.cardTitle}>{service?.name ?? 'Dịch vụ'}</Text>
+          <View
+            key={id}
+            style={[
+              styles.serviceCard,
+              { borderColor: palette.border, backgroundColor: palette.surface },
+            ]}
+          >
+            <Text style={[styles.cardTitle, { color: palette.text }]}>
+              {service?.name ?? t('onboarding.service')}
+            </Text>
             <Select
-              label="Nhu cầu"
+              label={t('onboarding.serviceNeed')}
               value={draft.mode}
               options={
                 role === 'PHOTOGRAPHER'
-                  ? [{ value: 'OFFERED', label: 'Cung cấp' }]
+                  ? [{ value: 'OFFERED', label: t('onboarding.offer') }]
                   : [
-                      { value: 'WANTED', label: 'Đang tìm' },
-                      { value: 'OFFERED', label: 'Cung cấp' },
+                      { value: 'WANTED', label: t('onboarding.wanted') },
+                      { value: 'OFFERED', label: t('onboarding.offer') },
                     ]
               }
               onChange={(value) =>
@@ -668,7 +733,7 @@ export function ServicesSection({
                 <View style={styles.row}>
                   <View style={styles.flex}>
                     <TextField
-                      label="Giá từ (VND)"
+                      label={t('onboarding.minPrice')}
                       keyboardType="number-pad"
                       value={draft.min}
                       onChangeText={(min) => update(id, { min })}
@@ -676,7 +741,7 @@ export function ServicesSection({
                   </View>
                   <View style={styles.flex}>
                     <TextField
-                      label="Giá đến (VND)"
+                      label={t('onboarding.maxPrice')}
                       keyboardType="number-pad"
                       value={draft.max}
                       onChangeText={(max) => update(id, { max })}
@@ -684,8 +749,8 @@ export function ServicesSection({
                   </View>
                 </View>
                 <TextField
-                  label="Đơn vị giá"
-                  placeholder="Ví dụ: buổi, giờ, gói"
+                  label={t('onboarding.priceUnit')}
+                  placeholder={t('onboarding.priceUnitPlaceholder')}
                   value={draft.unit}
                   onChangeText={(unit) => update(id, { unit })}
                 />
@@ -696,7 +761,7 @@ export function ServicesSection({
       })}
       <FormError message={error} />
       <Button
-        label="Lưu và tiếp tục"
+        label={t('onboarding.saveContinue')}
         loading={mutation.isPending}
         onPress={() => void save()}
       />
@@ -713,6 +778,8 @@ export function LocationSection({
   onSaved: () => Promise<void> | void;
   onSkip?: () => void;
 }) {
+  const { locale, t } = useI18n();
+  const palette = useOnboardingPalette();
   const [permissionBlocked, setPermissionBlocked] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mutation = useMutation({
@@ -722,8 +789,8 @@ export function LocationSection({
         setPermissionBlocked(!permission.canAskAgain);
         throw new Error(
           permission.canAskAgain
-            ? 'Bạn chưa cấp quyền vị trí. Có thể thử lại khi sẵn sàng.'
-            : 'Quyền vị trí đang bị tắt. Hãy bật lại trong Cài đặt.',
+            ? t('nearby.permissionDeniedMessage')
+            : t('nearby.permissionRestrictedMessage'),
         );
       }
       const location = await Location.getCurrentPositionAsync({
@@ -745,38 +812,45 @@ export function LocationSection({
       await mutation.mutateAsync();
       await onSaved();
     } catch (caught) {
-      setError(actionErrorMessage(caught));
+      setError(actionErrorMessage(caught, locale));
     }
   };
 
   return (
     <>
       <SectionHeader
-        title="Vị trí gần bạn"
-        description="PhotoMatch chỉ hỏi quyền khi bạn bấm nút dưới đây. Tọa độ chính xác được lưu riêng cho bạn; người khác chỉ thấy khoảng cách đã làm mờ."
+        title={t('onboarding.locationTitle')}
+        description={t('onboarding.locationDescription')}
       />
-      <View style={styles.infoCard}>
-        <Text style={styles.cardTitle}>Bạn vẫn kiểm soát việc hiển thị</Text>
-        <Text style={styles.description}>
-          Lưu vị trí không tự bật trạng thái xuất hiện trong Khám phá. Bạn có
-          thể bật/tắt presence sau khi hồ sơ đủ điều kiện.
+      <View
+        style={[styles.infoCard, { backgroundColor: palette.infoContainer }]}
+      >
+        <Text style={[styles.cardTitle, { color: palette.text }]}>
+          {t('onboarding.locationControlTitle')}
+        </Text>
+        <Text style={[styles.description, { color: palette.muted }]}>
+          {t('onboarding.locationControlDescription')}
         </Text>
       </View>
       <FormError message={error} />
       <Button
-        label="Dùng vị trí hiện tại"
+        label={t('onboarding.useCurrentLocation')}
         loading={mutation.isPending}
         onPress={() => void save()}
       />
       {permissionBlocked ? (
         <Button
-          label="Mở Cài đặt"
+          label={t('common.openSettings')}
           variant="secondary"
           onPress={() => void Linking.openSettings()}
         />
       ) : null}
       {onSkip ? (
-        <Button label="Bổ sung sau" variant="ghost" onPress={onSkip} />
+        <Button
+          label={t('onboarding.addLater')}
+          variant="ghost"
+          onPress={onSkip}
+        />
       ) : null}
     </>
   );
@@ -789,6 +863,8 @@ export function PresenceControl({
   scope: ResolvedScope;
   progress: OnboardingProgressResponse;
 }) {
+  const { locale, t } = useI18n();
+  const palette = useOnboardingPalette();
   const queryClient = useQueryClient();
   const presence = useQuery({
     queryKey: queryKeys.presence(scope),
@@ -806,23 +882,27 @@ export function PresenceControl({
       queryClient.setQueryData(queryKeys.presence(scope), value),
   });
   return (
-    <View style={styles.switchRow}>
+    <View style={[styles.switchRow, { backgroundColor: palette.surface }]}>
       <View style={styles.flex}>
-        <Text style={styles.cardTitle}>Xuất hiện trong Khám phá</Text>
-        <Text style={styles.description}>
+        <Text style={[styles.cardTitle, { color: palette.text }]}>
+          {t('onboarding.readyPresence')}
+        </Text>
+        <Text style={[styles.description, { color: palette.muted }]}>
           {progress.discoveryEligible
-            ? 'Hiển thị vị trí gần đúng trong 24 giờ.'
-            : 'Hoàn thiện các mục eligibility trước khi bật.'}
+            ? t('onboarding.presenceVisibleDescription')
+            : t('onboarding.presenceIncompleteDescription')}
         </Text>
       </View>
       <Switch
-        accessibilityLabel="Xuất hiện trong Khám phá"
+        accessibilityLabel={t('onboarding.readyPresence')}
         disabled={!progress.discoveryEligible || mutation.isPending}
         value={presence.data?.isVisible ?? false}
         onValueChange={(value) => mutation.mutate(value)}
       />
       {mutation.error ? (
-        <Text style={styles.error}>{actionErrorMessage(mutation.error)}</Text>
+        <Text style={[styles.error, { color: palette.error }]}>
+          {actionErrorMessage(mutation.error, locale)}
+        </Text>
       ) : null}
     </View>
   );
@@ -841,32 +921,60 @@ export function OnboardingSummary({
   onResume: () => void;
   onComplete: () => Promise<void> | void;
 }) {
+  const { t } = useI18n();
+  const palette = useOnboardingPalette();
   const warning = portfolioWarning(progress.role, portfolioCount);
   return (
     <>
       <SectionHeader
-        title={progress.complete ? 'Hồ sơ đã sẵn sàng' : 'Tổng kết hồ sơ'}
-        description="Trạng thái dưới đây được lấy trực tiếp từ server."
+        title={
+          progress.complete
+            ? t('onboarding.summaryReady')
+            : t('onboarding.summaryTitle')
+        }
+        description={t('onboarding.summaryDescription')}
       />
       {progress.missing.length ? (
-        <View style={styles.warningCard}>
-          <Text style={styles.cardTitle}>Cần bổ sung</Text>
+        <View
+          style={[
+            styles.warningCard,
+            { backgroundColor: palette.warningContainer },
+          ]}
+        >
+          <Text style={[styles.cardTitle, { color: palette.text }]}>
+            {t('onboarding.missingTitle')}
+          </Text>
           {progress.missing.map((item) => (
-            <Text key={item}>• {missingLabels[item] ?? item}</Text>
+            <Text key={item} style={{ color: palette.text }}>
+              • {t(missingLabelKeys[item] ?? 'common.unknown')}
+            </Text>
           ))}
         </View>
       ) : (
-        <View style={styles.successCard}>
-          <Text style={styles.cardTitle}>Đã hoàn tất onboarding</Text>
+        <View
+          style={[
+            styles.successCard,
+            { backgroundColor: palette.successContainer },
+          ]}
+        >
+          <Text style={[styles.cardTitle, { color: palette.text }]}>
+            {t('onboarding.completed')}
+          </Text>
         </View>
       )}
-      {warning ? <Text style={styles.warning}>{warning}</Text> : null}
+      {warning ? (
+        <Text style={styles.warning}>{t('profile.portfolioWarning')}</Text>
+      ) : null}
       {!progress.discoveryEligible ? (
-        <View style={styles.infoCard}>
-          <Text style={styles.cardTitle}>Chưa đủ điều kiện Khám phá</Text>
+        <View
+          style={[styles.infoCard, { backgroundColor: palette.infoContainer }]}
+        >
+          <Text style={[styles.cardTitle, { color: palette.text }]}>
+            {t('onboarding.discoveryIneligible')}
+          </Text>
           {progress.discoveryReasons.map((reason) => (
-            <Text key={reason}>
-              • {discoveryReasonLabels[reason] ?? reason}
+            <Text key={reason} style={{ color: palette.text }}>
+              • {t(discoveryReasonLabelKeys[reason] ?? 'common.unknown')}
             </Text>
           ))}
         </View>
@@ -874,9 +982,12 @@ export function OnboardingSummary({
         <PresenceControl scope={scope} progress={progress} />
       )}
       {progress.complete ? (
-        <Button label="Bắt đầu khám phá" onPress={() => void onComplete()} />
+        <Button
+          label={t('onboarding.startDiscovery')}
+          onPress={() => void onComplete()}
+        />
       ) : (
-        <Button label="Quay lại bổ sung" onPress={onResume} />
+        <Button label={t('onboarding.resume')} onPress={onResume} />
       )}
     </>
   );
@@ -891,21 +1002,32 @@ export function PortfolioRequirement({
   count: number;
   onSummary: () => void;
 }) {
+  const { t } = useI18n();
+  const palette = useOnboardingPalette();
   return (
     <>
       <SectionHeader
-        title="Portfolio photographer"
-        description="Photographer cần ít nhất 6 ảnh đã upload thành công để hoàn tất onboarding và đủ điều kiện Khám phá."
+        title={t('onboarding.portfolioTitle')}
+        description={t('onboarding.portfolioDescription')}
       />
-      <View style={styles.warningCard}>
-        <Text style={styles.cardTitle}>{count}/6 ảnh</Text>
-        <Text>
-          Quản lý upload, retry và sắp xếp portfolio được thực hiện trong màn
-          Portfolio. Hồ sơ sẽ không được ghi nhận là discoverable khi chưa đủ 6
-          ảnh.
+      <View
+        style={[
+          styles.warningCard,
+          { backgroundColor: palette.warningContainer },
+        ]}
+      >
+        <Text style={[styles.cardTitle, { color: palette.text }]}>
+          {t('onboarding.portfolioCount', { count })}
+        </Text>
+        <Text style={{ color: palette.text }}>
+          {t('onboarding.portfolioManagement')}
         </Text>
       </View>
-      <Button label="Xem tổng kết" variant="secondary" onPress={onSummary} />
+      <Button
+        label={t('onboarding.viewSummary')}
+        variant="secondary"
+        onPress={onSummary}
+      />
     </>
   );
 }
@@ -913,17 +1035,14 @@ export function PortfolioRequirement({
 const styles = StyleSheet.create({
   header: { gap: spacing.sm },
   title: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 26,
   },
-  description: { color: colors.light.muted, lineHeight: 21 },
+  description: { lineHeight: 21 },
   error: { color: colors.danger },
   warning: { color: colors.warning, fontFamily: typography.semibold },
   success: { color: colors.success, fontFamily: typography.semibold },
   note: {
-    color: colors.light.muted,
-    backgroundColor: colors.light.surfaceVariant,
     padding: spacing.md,
     borderRadius: radius.md,
   },
@@ -932,30 +1051,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.light.border,
     borderRadius: radius.xl,
-    backgroundColor: colors.light.surfaceVariant,
   },
   row: { flexDirection: 'row', gap: spacing.md },
   flex: { flex: 1 },
-  cardTitle: { fontFamily: typography.semibold, color: colors.light.text },
+  cardTitle: { fontFamily: typography.semibold },
   roleCard: {
     minHeight: 88,
     gap: spacing.sm,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.light.border,
     borderRadius: radius.lg,
-    backgroundColor: '#FFFFFF',
   },
-  roleCardSelected: {
-    borderColor: colors.brand,
-    backgroundColor: colors.light.infoContainer,
-  },
-  providerCard: {
-    borderColor: colors.brand,
-    backgroundColor: colors.light.infoContainer,
-  },
+  providerCard: {},
   roleEyebrow: {
     color: colors.brand,
     fontFamily: typography.bold,
@@ -966,27 +1074,22 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.light.border,
     borderRadius: radius.lg,
-    backgroundColor: '#FFFFFF',
   },
   infoCard: {
     gap: spacing.sm,
     padding: spacing.lg,
     borderRadius: radius.md,
-    backgroundColor: colors.light.infoContainer,
   },
   warningCard: {
     gap: spacing.sm,
     padding: spacing.lg,
     borderRadius: radius.md,
-    backgroundColor: colors.light.warningContainer,
   },
   successCard: {
     gap: spacing.sm,
     padding: spacing.lg,
     borderRadius: radius.md,
-    backgroundColor: colors.light.successContainer,
   },
   switchRow: {
     minHeight: 64,
@@ -995,6 +1098,5 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.md,
     borderRadius: radius.md,
-    backgroundColor: '#FFFFFF',
   },
 });

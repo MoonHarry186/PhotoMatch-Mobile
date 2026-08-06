@@ -6,7 +6,9 @@ import { StyleSheet, Text, View } from 'react-native';
 import { ErrorState, LoadingState } from '@/components/feedback';
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button } from '@/components/ui';
+import { useI18n } from '@/i18n/i18n-provider';
 import { useSession } from '@/providers/session-provider';
+import { useTheme } from '@/providers/theme-provider';
 import { queryKeys } from '@/services/api/query-keys';
 import { useNavigationStore } from '@/stores/navigation.store';
 import { colors, elevation, radius, spacing, typography } from '@/theme';
@@ -26,13 +28,16 @@ import {
 } from './onboarding-sections';
 
 const stepLabels: Record<OnboardingStep, string> = {
-  personal: 'Cá nhân',
-  avatar: 'Ảnh',
-  provider: 'Cung cấp dịch vụ',
+  personal: 'onboarding.personalStep',
+  avatar: 'onboarding.avatarStep',
+  provider: 'onboarding.providerStep',
 };
 
 export function OnboardingScreen() {
   const session = useSession();
+  const { t } = useI18n();
+  const { resolved } = useTheme();
+  const palette = resolved === 'dark' ? colors.dark : colors.light;
   const router = useRouter();
   const user = session.snapshot?.user;
   const scope = useMemo(
@@ -66,12 +71,12 @@ export function OnboardingScreen() {
   if (session.gate === 'signed-out') return <Redirect href="/(auth)/sign-in" />;
   if (session.gate === 'app') return <Redirect href="/(tabs)/discovery" />;
   if (!user || progress.isPending || profile.isPending)
-    return <LoadingState label="Đang tải tiến độ onboarding…" />;
+    return <LoadingState label={t('onboarding.loading')} />;
   if (progress.isError || profile.isError || !progress.data) {
     return (
       <ErrorState
-        title="Không thể tải onboarding"
-        primaryActionLabel="Thử lại"
+        title={t('onboarding.loadError')}
+        primaryActionLabel={t('common.retry')}
         onPrimaryAction={() => {
           void progress.refetch();
           void profile.refetch();
@@ -128,18 +133,36 @@ export function OnboardingScreen() {
     <AppScreen>
       <View style={styles.topbar}>
         {currentStepIndex > 0 ? (
-          <Button label="← Quay lại" variant="ghost" onPress={goBack} />
+          <Button
+            label={t('onboarding.back')}
+            variant="ghost"
+            onPress={goBack}
+          />
         ) : (
           <View />
         )}
-        <Text style={styles.stepCount}>
+        <Text
+          style={[
+            styles.stepCount,
+            { backgroundColor: palette.infoContainer, color: palette.info },
+          ]}
+        >
           {currentStepIndex + 1}/{onboardingSteps.length}
         </Text>
       </View>
       <View style={styles.progress}>
         <View style={styles.progressLabels}>
-          <Text style={styles.progressLabel}>Thiết lập tài khoản</Text>
-          <Text style={styles.progressCurrent}>{stepLabels[currentStep]}</Text>
+          <Text style={[styles.progressLabel, { color: palette.text }]}>
+            {t('onboarding.setupAccount')}
+          </Text>
+          <Text style={[styles.progressCurrent, { color: palette.muted }]}>
+            {t(
+              stepLabels[currentStep] as
+                | 'onboarding.personalStep'
+                | 'onboarding.avatarStep'
+                | 'onboarding.providerStep',
+            )}
+          </Text>
         </View>
         <View style={styles.track}>
           <View
@@ -158,18 +181,18 @@ export function OnboardingScreen() {
       <View style={styles.contentCard}>
         {content ?? (
           <>
-            <Text style={styles.error}>
-              Chưa xác định được vai trò hiện tại.
+            <Text style={[styles.error, { color: palette.error }]}>
+              {t('role.current')}
             </Text>
             <Button
-              label="Tải lại"
+              label={t('onboarding.reload')}
               onPress={() => void session.reload({ refreshAccessToken: true })}
             />
           </>
         )}
       </View>
       <Button
-        label="Đăng xuất"
+        label={t('onboarding.signOut')}
         variant="ghost"
         onPress={() => void session.signOut()}
       />
@@ -189,11 +212,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     overflow: 'hidden',
-    color: colors.brand,
     fontFamily: typography.bold,
     textAlign: 'center',
     borderRadius: radius.full,
-    backgroundColor: colors.light.infoContainer,
   },
   progress: { gap: spacing.sm },
   progressLabels: {
@@ -203,12 +224,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   progressLabel: {
-    color: colors.light.text,
     fontFamily: typography.semibold,
     fontSize: 14,
   },
   progressCurrent: {
-    color: colors.light.muted,
     fontFamily: typography.semibold,
     fontSize: 13,
   },
@@ -216,7 +235,6 @@ const styles = StyleSheet.create({
     height: 6,
     overflow: 'hidden',
     borderRadius: radius.full,
-    backgroundColor: colors.light.border,
   },
   fill: {
     height: '100%',
@@ -227,9 +245,7 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
     padding: spacing.xl,
     borderWidth: 1,
-    borderColor: colors.light.border,
     borderRadius: radius.xl,
-    backgroundColor: colors.light.surface,
     ...elevation.card,
   },
   error: { color: colors.danger },

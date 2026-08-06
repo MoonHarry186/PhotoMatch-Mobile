@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, useColorScheme, View } from 'react-native';
 
+import { useI18n } from '@/i18n/i18n-provider';
 import { useOptionalTheme } from '@/providers/theme-provider';
 import { colors, spacing, typography } from '@/theme';
 
@@ -20,7 +21,7 @@ export interface ErrorStateProps {
 }
 
 export function ErrorState({
-  title = 'Không thể tải dữ liệu',
+  title,
   description,
   message,
   icon,
@@ -31,11 +32,13 @@ export function ErrorState({
   secondaryActionLabel,
   onSecondaryAction,
 }: ErrorStateProps) {
+  const { t } = useI18n();
   const theme = useOptionalTheme();
   const systemTheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const resolved = theme?.resolved ?? systemTheme;
   const palette = resolved === 'dark' ? colors.dark : colors.light;
   const primaryHandler = onPrimaryAction ?? onAction;
+  const resolvedTitle = title ?? t('common.errorLoading');
   return (
     <View
       accessibilityRole="summary"
@@ -49,15 +52,15 @@ export function ErrorState({
           </Text>
         )}
       </View>
-      <Text style={[styles.title, { color: palette.text }]}>{title}</Text>
+      <Text style={[styles.title, { color: palette.text }]}>
+        {resolvedTitle}
+      </Text>
       <Text style={[styles.description, { color: palette.muted }]}>
-        {description ??
-          message ??
-          'Có vẻ kết nối đang gặp sự cố. Hãy thử lại sau nhé.'}
+        {description ?? message ?? t('common.genericError')}
       </Text>
       {primaryHandler ? (
         <Button
-          label={primaryActionLabel ?? actionLabel ?? 'Thử lại'}
+          label={primaryActionLabel ?? actionLabel ?? t('common.retry')}
           onPress={primaryHandler}
         />
       ) : null}

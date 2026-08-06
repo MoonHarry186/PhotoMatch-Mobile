@@ -2,10 +2,12 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useNetworkStatus } from '@/hooks/use-network-status';
+import { useI18n } from '@/i18n/i18n-provider';
 
 import { AppBanner } from './AppBanner';
 
 export function OfflineBanner() {
+  const { t } = useI18n();
   const { isOnline, refresh } = useNetworkStatus();
   const insets = useSafeAreaInsets();
   if (isOnline) return null;
@@ -13,9 +15,11 @@ export function OfflineBanner() {
     <View pointerEvents="box-none" style={[styles.host, { top: insets.top }]}>
       <AppBanner
         visible
-        title="Bạn đang ngoại tuyến"
-        message="Một số tính năng có thể bị hạn chế."
-        actions={[{ label: 'Kiểm tra lại', onPress: () => void refresh() }]}
+        title={t('common.offline')}
+        message={t('common.offlineMessage')}
+        actions={[
+          { label: t('common.checkAgain'), onPress: () => void refresh() },
+        ]}
       />
     </View>
   );

@@ -11,7 +11,9 @@ import { FilterChips, StatusBadge } from '@/components/domain';
 import { EmptyState, ErrorState, LoadingState } from '@/components/feedback';
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button } from '@/components/ui';
+import { useI18n } from '@/i18n/i18n-provider';
 import { useSession } from '@/providers/session-provider';
+import { useTheme } from '@/providers/theme-provider';
 import { queryKeys } from '@/services/api/query-keys';
 import { colors, elevation, radius, spacing, typography } from '@/theme';
 
@@ -25,8 +27,13 @@ import {
   type NearbyFilters,
 } from './nearby.types';
 
+type ThemePalette = (typeof colors)['light'] | (typeof colors)['dark'];
+
 export function NearbyScreen() {
   const session = useSession();
+  const { t } = useI18n();
+  const { resolved } = useTheme();
+  const palette = resolved === 'dark' ? colors.dark : colors.light;
   const router = useRouter();
   const queryClient = useQueryClient();
   const user = session.snapshot?.user;
@@ -65,25 +72,27 @@ export function NearbyScreen() {
     setFilterVisible(false);
   };
   const items = nearby.data?.pages.flatMap((page) => page.items) ?? [];
-  const activeChips = filterChips(filters, services.data ?? []);
+  const activeChips = filterChips(filters, services.data ?? [], t);
 
   if (!user?.currentRoleId || !role)
-    return <ErrorState title="Chưa xác định được vai trò hiện tại" />;
+    return <ErrorState title={t('role.current')} />;
 
   return (
     <AppScreen>
       <View style={styles.header}>
         <View style={styles.flex}>
-          <Text accessibilityRole="header" style={styles.title}>
-            Quanh đây
+          <Text
+            accessibilityRole="header"
+            style={[styles.title, { color: palette.text }]}
+          >
+            {t('nearby.title')}
           </Text>
-          <Text style={styles.subtitle}>
-            Danh sách dùng khoảng cách gần đúng từ backend, không nhận tọa độ
-            của người khác.
+          <Text style={[styles.subtitle, { color: palette.muted }]}>
+            {t('nearby.subtitle')}
           </Text>
         </View>
         <Button
-          label="Bộ lọc"
+          label={t('nearby.filter')}
           variant="secondary"
           onPress={() => setFilterVisible(true)}
         />
@@ -99,7 +108,7 @@ export function NearbyScreen() {
             onRemove={(key) => void applyFilters(removeFilter(filters, key))}
           />
           <Button
-            label="Xóa tất cả bộ lọc"
+            label={t('nearby.clearFilters')}
             variant="ghost"
             onPress={async () => {
               await queryClient.cancelQueries({
@@ -111,16 +120,19 @@ export function NearbyScreen() {
         </View>
       ) : null}
 
-      <Text accessibilityRole="header" style={styles.sectionTitle}>
-        Hồ sơ phù hợp
+      <Text
+        accessibilityRole="header"
+        style={[styles.sectionTitle, { color: palette.text }]}
+      >
+        {t('nearby.sectionTitle')}
       </Text>
       {nearby.isPending ? (
-        <LoadingState label="Đang tìm người phù hợp quanh bạn…" />
+        <LoadingState label={t('nearby.loading')} />
       ) : nearby.isError ? (
         <ErrorState
-          title="Không thể tải Nearby"
-          description="Vị trí đã lưu, quyền truy cập hoặc kết nối có thể chưa sẵn sàng."
-          primaryActionLabel="Thử lại"
+          title={t('nearby.loadErrorTitle')}
+          description={t('nearby.loadErrorMessage')}
+          primaryActionLabel={t('common.retry')}
           onPrimaryAction={() => void nearby.refetch()}
         />
       ) : items.length ? (
@@ -129,6 +141,8 @@ export function NearbyScreen() {
             <NearbyCandidateCard
               key={item.userRoleId}
               item={item}
+              palette={palette}
+              t={t}
               onPress={() =>
                 router.push({
                   pathname: '/(details)/profile/[id]',
@@ -139,7 +153,7 @@ export function NearbyScreen() {
           ))}
           {nearby.hasNextPage ? (
             <Button
-              label="Xem thêm"
+              label={t('nearby.loadMore')}
               variant="secondary"
               loading={nearby.isFetchingNextPage}
               onPress={() => void nearby.fetchNextPage()}
@@ -148,8 +162,8 @@ export function NearbyScreen() {
         </View>
       ) : (
         <EmptyState
-          title="Chưa tìm thấy người phù hợp"
-          message="Hãy cập nhật vị trí, mở rộng bán kính hoặc thay đổi bộ lọc. Những tính năng khác vẫn sử dụng bình thường."
+          title={t('nearby.emptyTitle')}
+          message={t('nearby.emptyMessage')}
         />
       )}
 
@@ -168,41 +182,60 @@ export function NearbyScreen() {
 
 function NearbyCandidateCard({
   item,
+  palette,
+  t,
   onPress,
 }: {
   item: NearbyCandidate;
+  palette: ThemePalette;
+  t: ReturnType<typeof useI18n>['t'];
   onPress: () => void;
 }) {
+  const displayName = item.displayName || t('discovery.matches.defaultName');
+  const distance = item.distance || t('nearby.distanceUnknown');
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Mở hồ sơ ${item.displayName}, cách ${item.distance}`}
+      accessibilityLabel={t('nearby.openProfile', {
+        name: displayName,
+        distance,
+      })}
       onPress={onPress}
-      style={styles.card}
+      style={[styles.card, { backgroundColor: palette.surface }]}
     >
-      <View style={styles.avatarPlaceholder}>
-        <Text style={styles.avatarText}>
-          {item.displayName.slice(0, 1).toUpperCase()}
+      <View
+        style={[
+          styles.avatarPlaceholder,
+          { backgroundColor: palette.infoContainer },
+        ]}
+      >
+        <Text style={[styles.avatarText, { color: palette.info }]}>
+          {displayName.slice(0, 1).toUpperCase()}
         </Text>
       </View>
       <View style={styles.cardContent}>
-        <Text style={styles.cardTitle}>{item.displayName}</Text>
+        <Text style={[styles.cardTitle, { color: palette.text }]}>
+          {displayName}
+        </Text>
         {item.headline ? (
-          <Text numberOfLines={2} style={styles.subtitle}>
+          <Text
+            numberOfLines={2}
+            style={[styles.subtitle, { color: palette.muted }]}
+          >
             {item.headline}
           </Text>
         ) : null}
         <View style={styles.badges}>
-          <StatusBadge label={item.distance} />
+          <StatusBadge label={distance} />
           {item.verified ? (
-            <StatusBadge label="Đã xác minh" tone="success" />
+            <StatusBadge label={t('nearby.verified')} tone="success" />
           ) : null}
           {item.availabilityStatus === 'AVAILABLE' ? (
-            <StatusBadge label="Đang sẵn sàng" tone="success" />
+            <StatusBadge label={t('nearby.available')} tone="success" />
           ) : null}
         </View>
       </View>
-      <Text style={styles.chevron}>›</Text>
+      <Text style={[styles.chevron, { color: palette.info }]}>›</Text>
     </Pressable>
   );
 }
@@ -210,18 +243,22 @@ function NearbyCandidateCard({
 function filterChips(
   filters: NearbyFilters,
   services: { id: string; name: string }[],
+  t: ReturnType<typeof useI18n>['t'],
 ) {
   const serviceNames = new Map(services.map((item) => [item.id, item.name]));
   return [
     ...filters.serviceIds.map((id) => ({
       key: `service:${id}`,
-      label: serviceNames.get(id) ?? 'Dịch vụ',
+      label: serviceNames.get(id) ?? t('nearby.service'),
     })),
     ...(filters.minPrice !== undefined || filters.maxPrice !== undefined
       ? [
           {
             key: 'price',
-            label: `Giá ${filters.minPrice ?? 0}–${filters.maxPrice ?? '∞'} VND`,
+            label: t('nearby.price', {
+              min: filters.minPrice ?? 0,
+              max: filters.maxPrice ?? '∞',
+            }),
           },
         ]
       : []),
@@ -229,10 +266,10 @@ function filterChips(
       ? [{ key: 'radius', label: `${filters.radiusKm} km` }]
       : []),
     ...(filters.availableOnly
-      ? [{ key: 'available', label: 'Đang sẵn sàng' }]
+      ? [{ key: 'available', label: t('nearby.available') }]
       : []),
     ...(filters.verifiedOnly
-      ? [{ key: 'verified', label: 'Đã xác minh' }]
+      ? [{ key: 'verified', label: t('nearby.verified') }]
       : []),
   ];
 }
@@ -268,13 +305,11 @@ const styles = StyleSheet.create({
   },
   flex: { flex: 1, gap: spacing.xs },
   title: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 28,
   },
-  subtitle: { color: colors.light.muted, lineHeight: 20 },
+  subtitle: { lineHeight: 20 },
   sectionTitle: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 20,
   },
@@ -287,7 +322,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg,
     borderRadius: radius.lg,
-    backgroundColor: colors.light.surface,
     ...elevation.card,
   },
   avatarPlaceholder: {
@@ -296,16 +330,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.full,
-    backgroundColor: colors.light.infoContainer,
   },
   avatarText: {
-    color: colors.brand,
     fontFamily: typography.bold,
     fontSize: 22,
   },
   cardContent: { flex: 1, gap: spacing.xs },
   cardTitle: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 16,
   },
@@ -314,5 +345,5 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.xs,
   },
-  chevron: { color: colors.brand, fontSize: 28 },
+  chevron: { fontSize: 28 },
 });

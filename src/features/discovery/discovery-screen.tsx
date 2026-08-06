@@ -26,6 +26,7 @@ import {
 } from '@/features/nearby/location-permission';
 import { useI18n } from '@/i18n/i18n-provider';
 import { useSession } from '@/providers/session-provider';
+import { useOptionalTheme } from '@/providers/theme-provider';
 import { queryKeys } from '@/services/api/query-keys';
 import { useNavigationStore } from '@/stores/navigation.store';
 import { colors, radius, spacing, typography } from '@/theme';
@@ -54,6 +55,8 @@ type DiscoveryView = 'feed' | 'interests' | 'matches';
 
 export function DiscoveryScreen() {
   const { locale, t } = useI18n();
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
   const router = useRouter();
   const queryClient = useQueryClient();
   const user = useSession().snapshot?.user;
@@ -280,9 +283,9 @@ export function DiscoveryScreen() {
           <LinearGradient
             pointerEvents="none"
             colors={[
-              'rgba(2, 6, 23, 0.58)',
-              'rgba(2, 6, 23, 0.24)',
-              'rgba(2, 6, 23, 0)',
+              colors.discovery.scrimMedium,
+              colors.discovery.scrimLight,
+              'transparent',
             ]}
             locations={[0, 0.52, 1]}
             style={styles.headerScrim}
@@ -333,9 +336,9 @@ export function DiscoveryScreen() {
           <LinearGradient
             pointerEvents="none"
             colors={[
-              'rgba(2, 6, 23, 0.84)',
-              'rgba(2, 6, 23, 0.32)',
-              'rgba(2, 6, 23, 0)',
+              colors.discovery.scrim,
+              colors.discovery.scrimLight,
+              'transparent',
             ]}
             locations={[0, 0.58, 1]}
             style={styles.connectionScrim}
@@ -353,7 +356,10 @@ export function DiscoveryScreen() {
       ) : (
         <>
           <View style={styles.header}>
-            <Text accessibilityRole="header" style={styles.title}>
+            <Text
+              accessibilityRole="header"
+              style={[styles.title, { color: palette.text }]}
+            >
               {role === 'CUSTOMER'
                 ? t('discovery.tab.feed')
                 : t('discovery.tab.interests')}
@@ -362,18 +368,21 @@ export function DiscoveryScreen() {
           <View accessibilityRole="tablist" style={styles.tabs}>
             {role === 'CUSTOMER' ? (
               <TabButton
+                palette={palette}
                 label={t('discovery.tab.feed')}
                 selected={false}
                 onPress={() => setView('feed')}
               />
             ) : (
               <TabButton
+                palette={palette}
                 label={t('discovery.tab.interests')}
                 selected={activeView === 'interests'}
                 onPress={() => setView('interests')}
               />
             )}
             <TabButton
+              palette={palette}
               label={t('discovery.tab.matches')}
               selected={false}
               onPress={() => setView('matches')}
@@ -407,10 +416,12 @@ export function DiscoveryScreen() {
 function TabButton({
   label,
   selected,
+  palette,
   onPress,
 }: {
   label: string;
   selected: boolean;
+  palette: (typeof colors)['light'] | (typeof colors)['dark'];
   onPress: () => void;
 }) {
   return (
@@ -421,7 +432,12 @@ function TabButton({
       style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
       onPress={onPress}
     >
-      <Text style={[styles.tabLabel, selected && styles.tabLabelSelected]}>
+      <Text
+        style={[
+          styles.tabLabel,
+          { color: selected ? palette.text : palette.muted },
+        ]}
+      >
         {label}
       </Text>
       <View style={[styles.tabIndicator, selected && styles.tabIndicatorOn]} />
@@ -438,7 +454,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   title: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 30,
     letterSpacing: -0.8,
@@ -506,7 +521,6 @@ const styles = StyleSheet.create({
     gap: spacing.xl,
     minHeight: 38,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.light.border,
   },
   tab: {
     minHeight: 38,
@@ -514,11 +528,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
   },
   tabLabel: {
-    color: colors.light.muted,
     fontFamily: typography.semibold,
     fontSize: 15,
   },
-  tabLabelSelected: { color: colors.light.text },
+  tabLabelSelected: {},
   tabIndicator: {
     height: 3,
     borderRadius: radius.full,
@@ -538,8 +551,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(127, 29, 29, 0.84)',
-    color: '#FFFFFF',
+    backgroundColor: colors.discovery.warningScrim,
+    color: colors.onBrand,
     textAlign: 'center',
   },
   pressed: { opacity: 0.72 },

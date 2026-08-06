@@ -32,7 +32,7 @@ import { DiscoveryPortfolioGallery } from './discovery-portfolio-gallery';
 import type { DiscoveryCandidate } from './discovery.types';
 
 const ACTION_THRESHOLD = 96;
-const TINDER_HEART = '#FF4458';
+const TINDER_HEART = colors.discovery.heart;
 
 type Scope = { userId: string; roleId: string };
 
@@ -338,7 +338,7 @@ export function DiscoveryCard({
       <View style={styles.actions}>
         <RoundAction
           accessibilityLabel={t('discovery.card.skip', { name: displayName })}
-          color="#FFFFFF"
+          color={colors.onBrand}
           icon={{ ios: 'xmark', android: 'close', web: 'close' }}
           disabled={pending}
           onPress={() => onAction('LEFT')}
@@ -498,14 +498,14 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    backgroundColor: 'rgba(2, 6, 23, 0.34)',
+    backgroundColor: colors.discovery.scrimLight,
   },
   previewName: {
     position: 'absolute',
     right: spacing.lg,
     bottom: spacing.lg,
     left: spacing.lg,
-    color: 'rgba(255, 255, 255, 0.62)',
+    color: colors.discovery.whiteTextSubtle,
     fontFamily: typography.semibold,
     fontSize: 14,
   },
@@ -538,12 +538,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.14)',
+    borderColor: colors.discovery.whiteBorder,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(2, 6, 23, 0.48)',
+    backgroundColor: colors.discovery.scrimSoft,
   },
   distanceText: {
-    color: '#FFFFFF',
+    color: colors.onBrand,
     fontFamily: typography.medium,
     fontSize: 12,
   },
@@ -624,8 +624,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.full,
-    backgroundColor: 'rgba(45, 40, 39, 0.98)',
-    shadowColor: '#000000',
+    backgroundColor: colors.discovery.cardScrim,
+    shadowColor: colors.discovery.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.42,
     shadowRadius: 12,
@@ -661,12 +661,12 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    backgroundColor: 'rgba(2, 6, 23, 0.38)',
+    backgroundColor: colors.discovery.scrimSoft,
   },
   skeletonContent: { gap: spacing.sm, padding: spacing.xl, paddingBottom: 128 },
   skeletonLine: {
     borderRadius: radius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: colors.discovery.skeleton,
   },
   skeletonName: { width: '58%', height: 34 },
   skeletonSubtitle: { width: '78%', height: 20 },
@@ -684,12 +684,12 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.24)',
+    backgroundColor: colors.discovery.actionSoft,
   },
   skeletonActionSmall: { width: 54, height: 54 },
   skeletonActionPrimary: {
     width: 66,
     height: 66,
-    backgroundColor: 'rgba(37, 99, 235, 0.6)',
+    backgroundColor: colors.discovery.brandOverlay,
   },
 });

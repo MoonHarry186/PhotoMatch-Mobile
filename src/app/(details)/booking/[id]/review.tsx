@@ -1,6 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 
 import { ErrorState } from '@/components/feedback';
+import { useI18n } from '@/i18n/i18n-provider';
 import { BookingDetailScreen } from '@/features/bookings/booking-detail-screen';
 import { useSession } from '@/providers/session-provider';
 import { idRouteParamsSchema } from '@/schemas/route-params';
@@ -11,10 +12,9 @@ export default function BookingReviewRoute() {
     id: Array.isArray(id) ? id[0] : id,
   });
   const user = useSession().snapshot?.user;
-  if (!parsed.success)
-    return <ErrorState title="Liên kết đánh giá không hợp lệ" />;
-  if (!user?.currentRoleId)
-    return <ErrorState title="Chưa xác định được vai trò hiện tại" />;
+  const { t } = useI18n();
+  if (!parsed.success) return <ErrorState title={t('common.invalidLink')} />;
+  if (!user?.currentRoleId) return <ErrorState title={t('role.current')} />;
   return (
     <BookingDetailScreen
       bookingId={parsed.data.id}

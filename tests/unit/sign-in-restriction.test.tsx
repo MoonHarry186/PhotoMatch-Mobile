@@ -38,6 +38,7 @@ jest.mock('@/providers/session-provider', () => ({
 }));
 
 jest.mock('@/i18n/i18n-provider', () => ({
+  useOptionalI18n: () => null,
   useI18n: () => ({
     t: (key: string) =>
       (

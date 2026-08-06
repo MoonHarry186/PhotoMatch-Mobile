@@ -13,7 +13,8 @@ import { env } from '@/config/env';
 import { AppError, getUserErrorMessage, reportError } from '@/core/errors';
 import { useI18n, type Translate } from '@/i18n/i18n-provider';
 import { useSession } from '@/providers/session-provider';
-import { spacing } from '@/theme';
+import { useOptionalTheme } from '@/providers/theme-provider';
+import { colors, spacing } from '@/theme';
 
 import { authApi } from './auth.api';
 import { GoogleSignInButton } from './google-sign-in-button';
@@ -82,6 +83,8 @@ export function GoogleOAuthButton() {
   const { acceptSession } = useSession();
   const router = useRouter();
   const { locale, t } = useI18n();
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -153,7 +156,10 @@ export function GoogleOAuthButton() {
         onPress={() => void signInWithGoogle()}
       />
       {error ? (
-        <Text accessibilityRole="alert" style={styles.error}>
+        <Text
+          accessibilityRole="alert"
+          style={[styles.error, { color: palette.error }]}
+        >
           {error}
         </Text>
       ) : null}
@@ -163,5 +169,5 @@ export function GoogleOAuthButton() {
 
 const styles = StyleSheet.create({
   container: { gap: spacing.sm },
-  error: { color: '#B91C1C', textAlign: 'center' },
+  error: { textAlign: 'center' },
 });

@@ -1,5 +1,6 @@
 import { ActionBottomSheet } from '@/components/overlays';
 import type { AppError } from '@/core/errors';
+import { useI18n } from '@/i18n/i18n-provider';
 
 const conflictCodes = new Set([
   'BOOKING_ALREADY_ACCEPTED',
@@ -24,23 +25,24 @@ export function BookingConflictSheet({
   onFindAnotherPhotographer: () => void;
   onDismiss: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <ActionBottomSheet
       visible={Boolean(error && isBookingConflict(error))}
-      title="Lịch chụp không còn khả dụng"
-      description="Photographer này vừa nhận một lịch khác vào thời gian bạn đã chọn."
+      title={t('booking.conflictTitle')}
+      description={t('booking.conflictDescription')}
       onDismiss={onDismiss}
       actions={[
         {
-          label: 'Chọn thời gian khác',
+          label: t('booking.chooseAnotherTime'),
           variant: 'primary',
           onPress: onChooseAnotherTime,
         },
         {
-          label: 'Tìm photographer khác',
+          label: t('booking.findAnotherPhotographer'),
           onPress: onFindAnotherPhotographer,
         },
-        { label: 'Đóng', variant: 'ghost', onPress: onDismiss },
+        { label: t('common.close'), variant: 'ghost', onPress: onDismiss },
       ]}
     />
   );

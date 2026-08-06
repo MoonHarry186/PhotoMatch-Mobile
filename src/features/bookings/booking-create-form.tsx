@@ -5,10 +5,12 @@ import { StyleSheet, Text } from 'react-native';
 
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button, DateTimeField, TextField } from '@/components/ui';
-import { normalizeError } from '@/core/errors';
+import { getUserErrorMessage, normalizeError } from '@/core/errors';
 import type { CreateBookingDto } from '@/generated/api/types.gen';
+import { useI18n } from '@/i18n/i18n-provider';
 import { createSubmissionKey } from '@/services/api/idempotency';
 import { queryKeys } from '@/services/api/query-keys';
+import { useTheme } from '@/providers/theme-provider';
 import { colors, spacing } from '@/theme';
 
 import { bookingApi } from './booking.api';
@@ -27,6 +29,9 @@ export function BookingCreateForm({
   scope: { userId: string; roleId: string };
 }) {
   const router = useRouter();
+  const { locale, t } = useI18n();
+  const { resolved } = useTheme();
+  const palette = resolved === 'dark' ? colors.dark : colors.light;
   const queryClient = useQueryClient();
   const [start, setStart] = useState<Date | null>(null);
   const [end, setEnd] = useState<Date | null>(null);
@@ -56,14 +61,15 @@ export function BookingCreateForm({
         params: { id: booking.id },
       });
     },
-    onError: (caught) => setError(normalizeError(caught).message),
+    onError: (caught) =>
+      setError(getUserErrorMessage(normalizeError(caught), locale)),
   });
   const submit = () => {
     if (!start || !end || end <= start)
-      return setError('Thời gian kết thúc phải sau thời gian bắt đầu.');
+      return setError(t('booking.invalidTime'));
     const agreedPrice = Number(price);
     if (!address.trim() || !Number.isFinite(agreedPrice) || agreedPrice <= 0)
-      return setError('Vui lòng nhập địa chỉ và giá hợp lệ.');
+      return setError(t('booking.invalidAddressPrice'));
     setError(null);
     mutation.mutate({
       photographerUserRoleId: photographerRoleId,
@@ -80,46 +86,51 @@ export function BookingCreateForm({
   };
   return (
     <AppScreen>
-      <Text accessibilityRole="header" style={styles.title}>
-        Đặt lịch chụp
+      <Text
+        accessibilityRole="header"
+        style={[styles.title, { color: palette.text }]}
+      >
+        {t('booking.createTitle')}
       </Text>
-      <Text style={styles.hint}>
-        Thông tin sẽ được gửi tới Photographer để xác nhận.
+      <Text style={[styles.hint, { color: palette.muted }]}>
+        {t('booking.createHint')}
       </Text>
       <DateTimeField
-        label="Bắt đầu"
+        label={t('booking.start')}
         value={start}
         onChange={setStart}
         mode="date"
       />
       <DateTimeField
-        label="Kết thúc"
+        label={t('booking.end')}
         value={end}
         onChange={setEnd}
         mode="date"
         minimumDate={start ?? undefined}
       />
       <TextField
-        label="Địa chỉ"
+        label={t('booking.address')}
         value={address}
         onChangeText={setAddress}
-        placeholder="Nhập địa chỉ buổi chụp"
+        placeholder={t('booking.addressPlaceholder')}
       />
       <TextField
-        label="Giá thỏa thuận (VND)"
+        label={t('booking.price')}
         value={price}
         onChangeText={setPrice}
         keyboardType="number-pad"
       />
       <TextField
-        label="Ghi chú (không bắt buộc)"
+        label={t('booking.note')}
         value={note}
         onChangeText={setNote}
         multiline
       />
-      <Text style={styles.error}>{error ?? ''}</Text>
+      <Text style={[styles.error, { color: palette.error }]}>
+        {error ?? ''}
+      </Text>
       <Button
-        label="Gửi yêu cầu đặt lịch"
+        label={t('booking.submit')}
         loading={mutation.isPending}
         onPress={submit}
       />
@@ -128,7 +139,7 @@ export function BookingCreateForm({
 }
 
 const styles = StyleSheet.create({
-  title: { color: colors.light.text, fontSize: 26, fontWeight: '700' },
-  hint: { color: colors.light.muted, marginBottom: spacing.sm },
-  error: { minHeight: 22, color: colors.light.error },
+  title: { fontSize: 26, fontWeight: '700' },
+  hint: { marginBottom: spacing.sm },
+  error: { minHeight: 22 },
 });

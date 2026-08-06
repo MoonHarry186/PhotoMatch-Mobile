@@ -14,7 +14,9 @@ import { AppScreen } from '@/components/layout/app-screen';
 import { MediaPlaceholder } from '@/components/media/media-components';
 import { Button } from '@/components/ui';
 import type { PortfolioItemResponse } from '@/generated/api/types.gen';
+import { useI18n } from '@/i18n/i18n-provider';
 import { useSession } from '@/providers/session-provider';
+import { useTheme } from '@/providers/theme-provider';
 import { profileApi } from './profile.api';
 import { queryKeys } from '@/services/api/query-keys';
 import { colors, radius, spacing, typography } from '@/theme';
@@ -25,9 +27,12 @@ function AssetImage({
   avatar = false,
 }: {
   assetId: string;
-  onPress: (url: string) => void;
+  onPress?: (url: string) => void;
   avatar?: boolean;
 }) {
+  const { t } = useI18n();
+  const { resolved } = useTheme();
+  const palette = resolved === 'dark' ? colors.dark : colors.light;
   const queryClient = useQueryClient();
   const assetKey = queryKeys.public('asset', { assetId });
   const asset = useQuery({
@@ -38,29 +43,42 @@ function AssetImage({
   if (!asset.data)
     return (
       <MediaPlaceholder
-        label={asset.isPending ? 'Đang tải ảnh…' : 'Ảnh không khả dụng'}
-      />
-    );
-  return (
-    <Pressable
-      accessibilityRole="imagebutton"
-      accessibilityLabel="Mở ảnh portfolio"
-      onPress={() => onPress(asset.data!)}
-    >
-      <Image
-        source={{ uri: asset.data }}
-        style={avatar ? styles.avatarImage : styles.portfolioImage}
-        contentFit="cover"
-        transition={180}
-        onError={() =>
-          void queryClient.invalidateQueries({ queryKey: assetKey })
+        label={
+          asset.isPending
+            ? t('profile.imageLoading')
+            : t('profile.imageUnavailable')
         }
       />
+    );
+  const image = (
+    <Image
+      source={{ uri: asset.data }}
+      style={[
+        avatar ? styles.avatarImage : styles.portfolioImage,
+        { backgroundColor: palette.surfaceVariant },
+      ]}
+      contentFit="cover"
+      transition={180}
+      onError={() => void queryClient.invalidateQueries({ queryKey: assetKey })}
+    />
+  );
+  return onPress ? (
+    <Pressable
+      accessibilityRole="imagebutton"
+      accessibilityLabel={t('profile.openPortfolioImage')}
+      onPress={() => onPress(asset.data!)}
+    >
+      {image}
     </Pressable>
+  ) : (
+    image
   );
 }
 
 function PortfolioGrid({ items }: { items: PortfolioItemResponse[] }) {
+  const { t } = useI18n();
+  const { resolved } = useTheme();
+  const palette = resolved === 'dark' ? colors.dark : colors.light;
   const [preview, setPreview] = useState<string | null>(null);
   return (
     <>
@@ -69,7 +87,10 @@ function PortfolioGrid({ items }: { items: PortfolioItemResponse[] }) {
           <View key={item.id} style={styles.gridItem}>
             <AssetImage assetId={item.assetId} onPress={setPreview} />
             {item.title ? (
-              <Text numberOfLines={1} style={styles.caption}>
+              <Text
+                numberOfLines={1}
+                style={[styles.caption, { color: palette.muted }]}
+              >
                 {item.title}
               </Text>
             ) : null}
@@ -83,7 +104,10 @@ function PortfolioGrid({ items }: { items: PortfolioItemResponse[] }) {
         onRequestClose={() => setPreview(null)}
       >
         <Pressable
-          style={styles.previewBackdrop}
+          style={[
+            styles.previewBackdrop,
+            { backgroundColor: colors.discovery.scrim },
+          ]}
           onPress={() => setPreview(null)}
         >
           {preview ? (
@@ -93,7 +117,9 @@ function PortfolioGrid({ items }: { items: PortfolioItemResponse[] }) {
               contentFit="contain"
             />
           ) : null}
-          <Text style={styles.previewHint}>Chạm để đóng</Text>
+          <Text style={[styles.previewHint, { color: palette.text }]}>
+            {t('profile.closePreview')}
+          </Text>
         </Pressable>
       </Modal>
     </>
@@ -107,6 +133,9 @@ export function PublicProfileScreen({
   const userRoleId = propId ?? params.userRoleId ?? params.id;
   const router = useRouter();
   const session = useSession();
+  const { t, locale } = useI18n();
+  const { resolved } = useTheme();
+  const palette = resolved === 'dark' ? colors.dark : colors.light;
   const profile = useQuery({
     queryKey: userRoleId
       ? queryKeys.publicProfile(userRoleId)
@@ -134,12 +163,12 @@ export function PublicProfileScreen({
     enabled: Boolean(userRoleId && profile.data?.role === 'PHOTOGRAPHER'),
   });
   if (!userRoleId || profile.isPending)
-    return <LoadingState label="Đang tải hồ sơ công khai…" />;
+    return <LoadingState label={t('profile.loading')} />;
   if (profile.isError || !profile.data)
     return (
       <ErrorState
-        title="Không thể tải hồ sơ"
-        primaryActionLabel="Thử lại"
+        title={t('profile.loadError')}
+        primaryActionLabel={t('common.retry')}
         onPrimaryAction={() => void profile.refetch()}
       />
     );
@@ -160,87 +189,100 @@ export function PublicProfileScreen({
   );
   return (
     <AppScreen>
-      <Button label="Quay lại" variant="ghost" onPress={() => router.back()} />
+      <Button
+        label={t('profile.back')}
+        variant="ghost"
+        onPress={() => router.back()}
+      />
       {isPhotographer ? (
         <>
-          <Section title="Portfolio">
+          <Section title={t('profile.portfolio')}>
             {portfolioItems.length ? (
               <PortfolioGrid items={portfolioItems} />
             ) : portfolio.isPending ? (
-              <LoadingState label="Đang tải portfolio…" />
+              <LoadingState label={t('profile.portfolioLoading')} />
             ) : (
-              <EmptyState title="Chưa có portfolio công khai" />
+              <EmptyState title={t('profile.portfolioEmpty')} />
             )}
             {portfolioHasNext ? (
               <Button
-                label="Xem thêm ảnh"
+                label={t('profile.viewMorePhotos')}
                 variant="secondary"
                 onPress={() => void portfolio.fetchNextPage()}
                 loading={portfolio.isFetchingNextPage}
               />
             ) : null}
           </Section>
-          <Section title="Danh tính và xác minh">
+          <Section title={t('profile.identity')}>
             <IdentityHeader profile={profile.data} />
           </Section>
-          <Section title="Đánh giá tổng quan">
+          <Section title={t('profile.overallRating')}>
             {rating && rating.count > 0 ? (
               <RatingSummary value={rating.average} count={rating.count} />
             ) : (
-              <Text style={styles.muted}>Chưa có đánh giá công khai</Text>
+              <Text style={[styles.muted, { color: palette.muted }]}>
+                {t('profile.noPublicReviews')}
+              </Text>
             )}
           </Section>
-          <Section title="Chuyên môn và giá">
-            <Text>
-              Chuyên môn:{' '}
+          <Section title={t('profile.expertiseAndPrice')}>
+            <Text style={{ color: palette.text }}>
+              {t('profile.expertise')}:{' '}
               {profile.data.activityFields
                 .map((field) => field.name)
-                .join(', ') || 'Chưa cập nhật'}
+                .join(', ') || t('profile.notUpdated')}
             </Text>
-            <Text>
-              Dịch vụ:{' '}
+            <Text style={{ color: palette.text }}>
+              {t('profile.services')}:{' '}
               {profile.data.services
                 .filter((service) => service.serviceMode === 'OFFERED')
                 .map((service) => service.name)
-                .join(', ') || 'Chưa cập nhật'}
+                .join(', ') || t('profile.notUpdated')}
             </Text>
-            <Text>Giá tham khảo: {priceLabel(profile.data.services)}</Text>
-            <Text>
-              Kinh nghiệm:{' '}
+            <Text style={{ color: palette.text }}>
+              {t('profile.referencePrice')}:{' '}
+              {priceLabel(profile.data.services, t, locale)}
+            </Text>
+            <Text style={{ color: palette.text }}>
+              {t('profile.experience')}:{' '}
               {profile.data.photographerProfile?.yearsExperience ??
-                'Chưa cập nhật'}{' '}
-              năm
+                t('profile.notUpdated')}{' '}
+              {locale === 'en' ? 'years' : 'năm'}
             </Text>
-            <Text>
-              Trạng thái:{' '}
+            <Text style={{ color: palette.text }}>
+              {t('profile.status')}:{' '}
               {profile.data.photographerProfile?.availabilityStatus ??
-                'Chưa xác định'}
+                t('profile.notSpecified')}
             </Text>
           </Section>
-          <Section title="Khu vực">
-            <Text>{profile.data.city?.name ?? 'Chưa công khai khu vực'}</Text>
-          </Section>
-          <Section title="Giới thiệu">
-            <Text>
-              {profile.data.bio || 'Người dùng chưa thêm phần giới thiệu.'}
+          <Section title={t('profile.location')}>
+            <Text style={{ color: palette.text }}>
+              {profile.data.city?.name ?? t('profile.locationPrivate')}
             </Text>
           </Section>
-          <Section title="Đánh giá công khai">
+          <Section title={t('profile.about')}>
+            <Text style={{ color: palette.text }}>
+              {profile.data.bio || t('profile.noBio')}
+            </Text>
+          </Section>
+          <Section title={t('profile.publicReviews')}>
             {reviewItems.length ? (
               reviewItems.map((review) => (
                 <ReviewCard
                   key={review.id}
-                  author={review.customer?.displayName ?? 'Khách hàng'}
+                  author={review.customer?.displayName ?? t('profile.customer')}
                   rating={review.rating}
                   comment={review.comment}
                 />
               ))
             ) : (
-              <Text style={styles.muted}>Chưa có đánh giá công khai</Text>
+              <Text style={[styles.muted, { color: palette.muted }]}>
+                {t('profile.noPublicReviews')}
+              </Text>
             )}
             {reviewsHasNext ? (
               <Button
-                label="Xem thêm đánh giá"
+                label={t('profile.viewMoreReviews')}
                 variant="secondary"
                 onPress={() => void reviews.fetchNextPage()}
                 loading={reviews.isFetchingNextPage}
@@ -251,16 +293,18 @@ export function PublicProfileScreen({
       ) : (
         <>
           <IdentityHeader profile={profile.data} />
-          <Section title="Giới thiệu">
-            <Text>
-              {profile.data.bio || 'Người dùng chưa thêm phần giới thiệu.'}
+          <Section title={t('profile.about')}>
+            <Text style={{ color: palette.text }}>
+              {profile.data.bio || t('profile.noBio')}
             </Text>
           </Section>
         </>
       )}
       {isOwner ? (
         <Button
-          label={isPhotographer ? 'Quản lý portfolio' : 'Chỉnh sửa hồ sơ'}
+          label={
+            isPhotographer ? t('profile.managePortfolio') : t('profile.edit')
+          }
           onPress={() =>
             router.push(
               isPhotographer
@@ -275,7 +319,7 @@ export function PublicProfileScreen({
           currentRole === 'CUSTOMER' &&
           firstOfferedService ? (
             <Button
-              label="Đặt lịch"
+              label={t('profile.book')}
               onPress={() =>
                 router.push({
                   pathname: '/(details)/booking/create',
@@ -288,7 +332,7 @@ export function PublicProfileScreen({
             />
           ) : null}
           <Button
-            label="Chặn hoặc báo cáo"
+            label={t('profile.blockOrReport')}
             variant="secondary"
             onPress={() =>
               router.push({
@@ -297,8 +341,8 @@ export function PublicProfileScreen({
               } as never)
             }
           />
-          <Text style={styles.ctaHint}>
-            Các thao tác chỉ hiển thị khi hồ sơ đủ điều kiện.
+          <Text style={[styles.ctaHint, { color: palette.muted }]}>
+            {t('profile.eligibilityHint')}
           </Text>
         </>
       )}
@@ -311,33 +355,40 @@ function IdentityHeader({
 }: {
   profile: NonNullable<Awaited<ReturnType<typeof profileApi.publicProfile>>>;
 }) {
+  const { t } = useI18n();
+  const { resolved } = useTheme();
+  const palette = resolved === 'dark' ? colors.dark : colors.light;
   return (
     <View style={styles.identityHeader}>
       {profile.avatarAssetId ? (
-        <AssetImage
-          assetId={profile.avatarAssetId}
-          avatar
-          onPress={() => undefined}
-        />
+        <AssetImage assetId={profile.avatarAssetId} avatar />
       ) : (
-        <View style={styles.avatarFallback}>
-          <Text style={styles.avatarLetter}>
+        <View
+          style={[
+            styles.avatarFallback,
+            { backgroundColor: palette.infoContainer },
+          ]}
+        >
+          <Text style={[styles.avatarLetter, { color: palette.info }]}>
             {(profile.displayName ?? '?').charAt(0).toUpperCase()}
           </Text>
         </View>
       )}
       <View style={styles.flex}>
-        <Text accessibilityRole="header" style={styles.title}>
-          {profile.displayName ?? 'Hồ sơ công khai'}
+        <Text
+          accessibilityRole="header"
+          style={[styles.title, { color: palette.text }]}
+        >
+          {profile.displayName ?? t('profile.publicProfile')}
         </Text>
-        <Text style={styles.muted}>
-          {profile.city?.name ?? 'Chưa công khai khu vực'}
+        <Text style={[styles.muted, { color: palette.muted }]}>
+          {profile.city?.name ?? t('profile.locationPrivate')}
         </Text>
         <StatusBadge
           label={
             profile.identityVerificationStatus === 'VERIFIED'
-              ? 'Đã xác minh danh tính'
-              : 'Chưa xác minh danh tính'
+              ? t('profile.verifiedIdentity')
+              : t('profile.unverifiedIdentity')
           }
           tone={
             profile.identityVerificationStatus === 'VERIFIED'
@@ -351,24 +402,36 @@ function IdentityHeader({
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
+  const { resolved } = useTheme();
+  const palette = resolved === 'dark' ? colors.dark : colors.light;
   return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+    <View style={[styles.section, { backgroundColor: palette.surface }]}>
+      <Text style={[styles.sectionTitle, { color: palette.text }]}>
+        {title}
+      </Text>
       {children}
     </View>
   );
 }
 
-function priceLabel(services: PublicProfileScreenProps['services']) {
+function priceLabel(
+  services: PublicProfileScreenProps['services'],
+  t: ReturnType<typeof useI18n>['t'],
+  locale: 'vi' | 'en',
+) {
   const offered = services.filter(
     (service) =>
       service.serviceMode === 'OFFERED' &&
       (service.minPrice != null || service.maxPrice != null),
   );
-  if (!offered.length) return 'Chưa cập nhật';
+  if (!offered.length) return t('profile.notUpdated');
   const first = offered[0]!;
-  const min = first.minPrice?.toLocaleString('vi-VN');
-  const max = first.maxPrice?.toLocaleString('vi-VN');
+  const min = first.minPrice?.toLocaleString(
+    locale === 'en' ? 'en-US' : 'vi-VN',
+  );
+  const max = first.maxPrice?.toLocaleString(
+    locale === 'en' ? 'en-US' : 'vi-VN',
+  );
   return `${min ?? ''}${max ? ` – ${max}` : ''} ${first.currency ?? 'VND'}${first.priceUnit ? `/${first.priceUnit}` : ''}`;
 }
 
@@ -386,21 +449,18 @@ const styles = StyleSheet.create({
   },
   flex: { flex: 1, gap: spacing.xs },
   title: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 24,
   },
-  muted: { color: colors.light.muted },
+  muted: {},
   avatarFallback: {
     width: 96,
     height: 96,
     borderRadius: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.light.infoContainer,
   },
   avatarLetter: {
-    color: colors.brand,
     fontFamily: typography.bold,
     fontSize: 30,
   },
@@ -408,10 +468,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg,
     borderRadius: radius.lg,
-    backgroundColor: '#FFFFFF',
   },
   sectionTitle: {
-    color: colors.light.text,
     fontFamily: typography.bold,
     fontSize: 18,
   },
@@ -421,26 +479,22 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 1,
     borderRadius: radius.md,
-    backgroundColor: colors.light.surfaceVariant,
   },
   avatarImage: {
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: colors.light.surfaceVariant,
   },
-  caption: { fontSize: 12, color: colors.light.muted },
+  caption: { fontSize: 12 },
   previewBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(2,6,23,0.94)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.lg,
   },
   previewImage: { width: '100%', height: '80%' },
-  previewHint: { color: '#FFFFFF', marginTop: spacing.md },
+  previewHint: { marginTop: spacing.md },
   ctaHint: {
-    color: colors.light.muted,
     textAlign: 'center',
     paddingBottom: spacing.lg,
   },

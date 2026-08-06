@@ -6,6 +6,7 @@ import {
   type PressableProps,
 } from 'react-native';
 
+import { useOptionalTheme } from '@/providers/theme-provider';
 import { colors, controlHeight, radius, spacing, typography } from '@/theme';
 
 type Props = PressableProps & {
@@ -22,6 +23,30 @@ export function Button({
   style,
   ...props
 }: Props) {
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
+  const variantStyle = {
+    backgroundColor:
+      variant === 'primary'
+        ? colors.brand
+        : variant === 'ghost'
+          ? 'transparent'
+          : palette.surface,
+    borderColor:
+      variant === 'primary'
+        ? colors.brand
+        : variant === 'danger'
+          ? palette.error
+          : variant === 'ghost'
+            ? 'transparent'
+            : colors.brand,
+  };
+  const labelColor =
+    variant === 'primary'
+      ? colors.onBrand
+      : variant === 'danger'
+        ? palette.error
+        : colors.brand;
   return (
     <Pressable
       accessibilityRole="button"
@@ -30,7 +55,7 @@ export function Button({
       disabled={disabled || loading}
       style={(state) => [
         styles.base,
-        styles[variant],
+        variantStyle,
         state.pressed && styles.pressed,
         (disabled || loading) && styles.disabled,
         typeof style === 'function' ? style(state) : style,
@@ -38,15 +63,9 @@ export function Button({
       {...props}
     >
       {loading ? (
-        <ActivityIndicator
-          color={variant === 'primary' ? '#FFFFFF' : colors.brand}
-        />
+        <ActivityIndicator color={labelColor} />
       ) : (
-        <Text
-          style={[styles.label, variant !== 'primary' && styles.secondaryLabel]}
-        >
-          {label}
-        </Text>
+        <Text style={[styles.label, { color: labelColor }]}>{label}</Text>
       )}
     </Pressable>
   );
@@ -61,12 +80,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
   },
-  primary: { backgroundColor: colors.brand, borderColor: colors.brand },
-  secondary: { backgroundColor: '#FFFFFF', borderColor: colors.brand },
-  danger: { backgroundColor: '#FFFFFF', borderColor: colors.danger },
-  ghost: { backgroundColor: 'transparent', borderColor: 'transparent' },
   pressed: { opacity: 0.78 },
   disabled: { opacity: 0.45 },
-  label: { color: '#FFFFFF', fontFamily: typography.semibold, fontSize: 16 },
-  secondaryLabel: { color: colors.brand },
+  label: { fontFamily: typography.semibold, fontSize: 16 },
 });

@@ -30,14 +30,16 @@ export default function TabsLayout() {
 
         return {
           headerShown: false,
-          tabBarActiveTintColor: isDiscovery ? '#FFFFFF' : palette.text,
+          tabBarActiveTintColor: isDiscovery ? colors.onBrand : palette.text,
           tabBarInactiveTintColor: isDiscovery
-            ? 'rgba(255, 255, 255, 0.56)'
+            ? colors.discovery.whiteTextSubtle
             : palette.muted,
           tabBarStyle: [
             styles.tabBar,
             {
-              backgroundColor: isDiscovery ? '#05070D' : palette.surface,
+              backgroundColor: isDiscovery
+                ? colors.dark.background
+                : palette.surface,
             },
           ],
           tabBarItemStyle: styles.tabBarItem,
@@ -122,10 +124,10 @@ const styles = StyleSheet.create({
     height: 80,
     paddingTop: 8,
     paddingBottom: 8,
-    backgroundColor: '#05070D',
+    backgroundColor: colors.dark.background,
     borderTopWidth: 0,
     borderTopColor: 'transparent',
-    shadowColor: '#000000',
+    shadowColor: colors.discovery.shadow,
     shadowOpacity: 0,
     elevation: 0,
   },
@@ -147,8 +149,8 @@ const styles = StyleSheet.create({
     height: 18,
     paddingHorizontal: 4,
     borderRadius: 9,
-    backgroundColor: '#FF4458',
-    color: '#FFFFFF',
+    backgroundColor: colors.discovery.heart,
+    color: colors.onBrand,
     fontSize: 10,
     lineHeight: 18,
   },

@@ -2,6 +2,7 @@ import { Link } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useI18n } from '@/i18n/i18n-provider';
+import { useOptionalTheme } from '@/providers/theme-provider';
 import { colors } from '@/theme';
 
 type Props = {
@@ -10,10 +11,12 @@ type Props = {
 
 export function LegalConsentNotice({ action }: Props) {
   const { t } = useI18n();
+  const theme = useOptionalTheme();
+  const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.copy}>
+      <Text style={[styles.copy, { color: palette.muted }]}>
         {t(
           action === 'sign-in'
             ? 'auth.legalSignInPrefix'
@@ -35,7 +38,6 @@ export function LegalConsentNotice({ action }: Props) {
 const styles = StyleSheet.create({
   container: { marginTop: 'auto' },
   copy: {
-    color: colors.light.muted,
     lineHeight: 20,
     textAlign: 'center',
   },

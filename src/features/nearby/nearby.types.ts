@@ -49,12 +49,12 @@ export function toNearbyCandidate(
 ): NearbyCandidate {
   return {
     userRoleId: value.userRoleId,
-    displayName: value.displayName?.trim() || 'Người dùng PhotoMatch',
+    displayName: value.displayName?.trim() || '',
     avatarAssetId: value.avatarAssetId ?? null,
     headline: value.headline ?? null,
     availabilityStatus: value.availabilityStatus ?? null,
     verified: value.identityVerificationStatus === 'VERIFIED',
-    distance: value.distance ?? 'Khoảng cách chưa xác định',
+    distance: value.distance ?? '',
   };
 }
 
