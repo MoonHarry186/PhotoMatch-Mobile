@@ -1,16 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
+import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { MediaPlaceholder } from '@/components/media/media-components';
+import { useOptionalI18n } from '@/i18n/i18n-provider';
+import { messages, type MessageKey } from '@/i18n/messages';
 import { getSignedAssetUrl } from '@/services/media/signed-url-cache';
 import { useTheme } from '@/providers/theme-provider';
 import { colors, radius, spacing, typography } from '@/theme';
+import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated';
 
 import type { MessageView } from './messaging.types';
 
 const elevationShadow = {
-  shadowColor: '#0F172A',
+  shadowColor: colors.dark.text,
   shadowOffset: { width: 0, height: 4 },
   shadowOpacity: 0.08,
   shadowRadius: 12,
@@ -27,6 +31,9 @@ export function ChatBubble({
   onRetry?: () => void;
 }) {
   const theme = useTheme();
+  const i18n = useOptionalI18n();
+  const [showMeta, setShowMeta] = useState(false);
+  const t = i18n?.t ?? ((key: MessageKey) => messages.vi[key]);
   const palette = theme.resolved === 'dark' ? colors.dark : colors.light;
   const failed =
     message.localStatus === 'failed' || message.status === 'FAILED';
@@ -41,18 +48,44 @@ export function ChatBubble({
     message.messageType === 'TEXT'
       ? message.content || ''
       : message.messageType === 'FILE'
-        ? 'Tệp đính kèm'
+        ? t('messaging.file')
         : message.messageType === 'SYSTEM'
-          ? message.content || 'Thông báo hệ thống'
-          : 'Ảnh đính kèm';
-  const time = new Date(message.sentAt).toLocaleTimeString('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+          ? message.content || t('messaging.system')
+          : t('messaging.image');
+  const time = new Date(message.sentAt).toLocaleTimeString(
+    i18n?.locale === 'en' ? 'en-US' : 'vi-VN',
+    {
+      hour: '2-digit',
+      minute: '2-digit',
+    },
+  );
+  const receiptStatus =
+    message.receiptStatus ??
+    (message.status === 'DELIVERED' ? 'delivered' : 'sent');
+  const receiptGlyph =
+    message.localStatus === 'sending'
+      ? '…'
+      : receiptStatus === 'read'
+        ? '✓✓'
+        : receiptStatus === 'delivered'
+          ? '✓✓'
+          : '✓';
+  const receiptLabel =
+    message.localStatus === 'sending'
+      ? t('messaging.sending')
+      : receiptStatus === 'read'
+        ? t('messaging.read')
+        : receiptStatus === 'delivered'
+          ? t('messaging.delivered')
+          : t('messaging.sent');
+  const receiptColor = receiptStatus === 'read' ? colors.brand : palette.muted;
 
   return (
-    <View style={[styles.container, isMine ? styles.mine : styles.received]}>
-      <View
+    <MessageBubbleRow isMine={isMine}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: showMeta }}
+        onPress={() => setShowMeta((value) => !value)}
         style={[
           styles.bubble,
           { backgroundColor: isMine ? colors.brand : palette.surfaceVariant },
@@ -73,13 +106,13 @@ export function ChatBubble({
                 style={styles.image}
               />
             ) : (
-              <MediaPlaceholder label="Đang tải ảnh…" />
+              <MediaPlaceholder label={t('messaging.loadingImage')} />
             )}
             {message.content ? (
               <Text
                 style={[
                   styles.content,
-                  { color: isMine ? '#FFFFFF' : palette.text },
+                  { color: isMine ? colors.onBrand : palette.text },
                   styles.caption,
                 ]}
               >
@@ -91,33 +124,56 @@ export function ChatBubble({
           <Text
             style={[
               styles.content,
-              { color: isMine ? '#FFFFFF' : palette.text },
+              { color: isMine ? colors.onBrand : palette.text },
               message.messageType === 'SYSTEM' && { color: palette.muted },
             ]}
           >
             {label}
           </Text>
         )}
-      </View>
+      </Pressable>
       {failed ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Tin nhắn chưa gửi được. Nhấn để thử lại."
+          accessibilityLabel={t('messaging.failedA11y')}
           onPress={onRetry}
           style={styles.retry}
         >
           <Text style={[styles.failed, { color: palette.error }]}>
-            Chưa gửi được · Thử lại
+            {t('messaging.failedRetry')}
           </Text>
         </Pressable>
-      ) : (
-        <View style={[styles.metaRow, isMine && styles.metaMine]}>
+      ) : showMeta ? (
+        <Animated.View
+          entering={FadeInDown.duration(200)}
+          exiting={FadeOutUp.duration(200)}
+          style={[styles.metaRow, isMine && styles.metaMine]}
+        >
           <Text style={[styles.meta, { color: palette.muted }]}>{time}</Text>
           {isMine ? (
-            <Text style={[styles.receipt, { color: colors.brand }]}>✓✓</Text>
+            <Text
+              accessibilityLabel={receiptLabel}
+              style={[styles.receipt, { color: receiptColor }]}
+            >
+              {receiptGlyph}
+            </Text>
           ) : null}
-        </View>
-      )}
+        </Animated.View>
+      ) : null}
+    </MessageBubbleRow>
+  );
+}
+
+export function MessageBubbleRow({
+  isMine,
+  children,
+}: {
+  isMine: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <View style={[styles.container, isMine ? styles.mine : styles.received]}>
+      {children}
     </View>
   );
 }

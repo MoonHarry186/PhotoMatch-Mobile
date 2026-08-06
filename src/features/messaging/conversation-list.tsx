@@ -1,8 +1,13 @@
-import { useInfiniteQuery, useQueries, useQuery } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -15,6 +20,8 @@ import {
 import { EmptyState, ErrorState, LoadingState } from '@/components/feedback';
 import { AppScreen } from '@/components/layout/app-screen';
 import { Button } from '@/components/ui';
+import { useI18n, type Translate } from '@/i18n/i18n-provider';
+import type { Locale } from '@/i18n/messages';
 import type {
   ConversationResponse,
   MatchResponse,
@@ -26,6 +33,8 @@ import { colors, elevation, radius, spacing, typography } from '@/theme';
 
 import { discoveryApi } from '../discovery/discovery.api';
 import { messagingApi } from './messaging.api';
+import { conversationMessagesOptions } from './messaging.queries';
+import type { ConversationSummary } from './messaging.types';
 
 type Palette = (typeof colors)['light'] | (typeof colors)['dark'];
 type Filter = 'all' | 'unread' | 'work' | 'personal';
@@ -44,11 +53,12 @@ type ConversationRuntime = ConversationResponse & {
   };
 };
 
-const filters: { key: Filter; label: string }[] = [
-  { key: 'all', label: 'Tất cả' },
-  { key: 'unread', label: 'Chưa đọc' },
-  { key: 'work', label: 'Công việc' },
-  { key: 'personal', label: 'Cá nhân' },
+const filters: {
+  key: Filter;
+  labelKey: 'messaging.filterAll' | 'messaging.filterUnread';
+}[] = [
+  { key: 'all', labelKey: 'messaging.filterAll' },
+  { key: 'unread', labelKey: 'messaging.filterUnread' },
 ];
 
 export function ConversationList({
@@ -57,6 +67,8 @@ export function ConversationList({
   scope: { userId: string; roleId: string };
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { t, locale } = useI18n();
   const theme = useOptionalTheme();
   const palette = theme?.resolved === 'dark' ? colors.dark : colors.light;
   const [search, setSearch] = useState('');
@@ -72,28 +84,42 @@ export function ConversationList({
     () => conversations.data?.pages.flatMap((page) => page.items) ?? [],
     [conversations.data],
   );
+  const matchIds = useMemo(
+    () => [...new Set(items.map((conversation) => conversation.matchId))],
+    [items],
+  );
   const matchQueries = useQueries({
-    queries: items.map((conversation) => ({
-      queryKey: queryKeys.match(scope, conversation.matchId),
+    queries: matchIds.map((matchId) => ({
+      queryKey: queryKeys.match(scope, matchId),
       queryFn: ({ signal }: { signal: AbortSignal }) =>
-        discoveryApi.match(conversation.matchId, signal),
+        discoveryApi.match(matchId, signal),
       staleTime: 5 * 60 * 1000,
     })),
   });
+  const matchesById = new Map(
+    matchIds.map(
+      (matchId, index) =>
+        [
+          matchId,
+          matchQueries[index]?.data as MatchResponse | undefined,
+        ] as const,
+    ),
+  );
 
-  const rows = items.map((conversation, index) => ({
+  const rows = items.map((conversation) => ({
     conversation: conversation as ConversationRuntime,
-    match: matchQueries[index]?.data as MatchResponse | undefined,
+    match: matchesById.get(conversation.matchId),
   }));
   const visibleRows = rows.filter(({ conversation, match }) => {
     const counterpart = conversation.counterpart ?? match?.counterpart;
-    const name = counterpart?.displayName ?? 'Photographer';
-    const preview = getPreview(conversation);
-    const normalizedSearch = search.trim().toLocaleLowerCase('vi-VN');
+    const name = counterpart?.displayName ?? t('discovery.matches.defaultName');
+    const preview = getPreview(conversation, t);
+    const formatLocale = locale === 'en' ? 'en-US' : 'vi-VN';
+    const normalizedSearch = search.trim().toLocaleLowerCase(formatLocale);
     const matchesSearch =
       !normalizedSearch ||
       `${name} ${preview}`
-        .toLocaleLowerCase('vi-VN')
+        .toLocaleLowerCase(formatLocale)
         .includes(normalizedSearch);
     if (!matchesSearch) return false;
     if (activeFilter === 'unread') return isUnread(conversation);
@@ -103,14 +129,22 @@ export function ConversationList({
     }
     return true;
   });
+  const prefetchMessages = useCallback(
+    (conversationId: string) => {
+      void queryClient.prefetchInfiniteQuery(
+        conversationMessagesOptions(scope, conversationId),
+      );
+    },
+    [queryClient, scope],
+  );
 
   if (conversations.isPending)
-    return <LoadingState label="Đang tải cuộc trò chuyện…" />;
+    return <LoadingState label={t('messaging.loading')} />;
   if (conversations.isError) {
     return (
       <ErrorState
-        title="Không thể tải tin nhắn"
-        primaryActionLabel="Thử lại"
+        title={t('messaging.loadError')}
+        primaryActionLabel={t('common.retry')}
         onPrimaryAction={() => void conversations.refetch()}
       />
     );
@@ -118,28 +152,18 @@ export function ConversationList({
   if (!items.length)
     return (
       <EmptyState
-        title="Chưa có cuộc trò chuyện"
-        message="Kết nối với một Photographer để bắt đầu nhắn tin."
+        title={t('messaging.empty')}
+        message={t('messaging.emptyMessage')}
       />
     );
 
   return (
     <AppScreen
       contentStyle={[styles.content, { backgroundColor: palette.background }]}
-      header={<MessagesHeader palette={palette} />}
+      header={
+        <MessagesHeader palette={palette} title={t('messaging.headerTitle')} />
+      }
     >
-      <View style={styles.heading}>
-        <Text
-          accessibilityRole="header"
-          style={[styles.title, { color: palette.text }]}
-        >
-          Tin nhắn
-        </Text>
-        <Text style={[styles.subtitle, { color: palette.muted }]}>
-          Kết nối và trao đổi cùng Photographer
-        </Text>
-      </View>
-
       <View
         style={[styles.searchBox, { backgroundColor: palette.surfaceVariant }]}
       >
@@ -149,11 +173,11 @@ export function ConversationList({
           tintColor={palette.muted}
         />
         <TextInput
-          accessibilityLabel="Tìm kiếm cuộc trò chuyện"
+          accessibilityLabel={t('messaging.searchA11y')}
           autoCapitalize="none"
           clearButtonMode="while-editing"
           onChangeText={setSearch}
-          placeholder="Tìm kiếm cuộc trò chuyện..."
+          placeholder={t('messaging.searchPlaceholder')}
           placeholderTextColor={palette.muted}
           style={[styles.searchInput, { color: palette.text }]}
           value={search}
@@ -187,11 +211,13 @@ export function ConversationList({
                 styles.filterText,
                 {
                   color:
-                    activeFilter === filter.key ? '#FFFFFF' : palette.muted,
+                    activeFilter === filter.key
+                      ? colors.onBrand
+                      : palette.muted,
                 },
               ]}
             >
-              {filter.label}
+              {t(filter.labelKey)}
             </Text>
           </Pressable>
         ))}
@@ -199,19 +225,38 @@ export function ConversationList({
 
       <View style={styles.list}>
         {visibleRows.length ? (
-          visibleRows.map(({ conversation, match }) => (
-            <ConversationRow
-              key={conversation.id}
-              conversation={conversation}
-              match={match}
-              palette={palette}
-              onPress={() =>
-                router.push({
-                  pathname: '/(details)/conversation/[id]',
-                  params: { id: conversation.id },
-                })
-              }
-            />
+          visibleRows.map(({ conversation, match }, index) => (
+            <View key={conversation.id}>
+              <ConversationRow
+                conversation={conversation}
+                match={match}
+                palette={palette}
+                t={t}
+                locale={locale}
+                onPrefetch={() => prefetchMessages(conversation.id)}
+                onPress={() => {
+                  const summary = getConversationSummary(conversation, match);
+                  router.push({
+                    pathname: '/(details)/conversation/[id]',
+                    params: {
+                      id: summary.id,
+                      displayName: summary.displayName ?? '',
+                      avatarAssetId: summary.avatarAssetId ?? '',
+                      matchId: summary.matchId,
+                      status: summary.status,
+                    },
+                  });
+                }}
+              />
+              {index < visibleRows.length - 1 ? (
+                <View
+                  style={[
+                    styles.rowSeparator,
+                    { backgroundColor: palette.border },
+                  ]}
+                />
+              ) : null}
+            </View>
           ))
         ) : (
           <View
@@ -226,10 +271,10 @@ export function ConversationList({
               tintColor={palette.muted}
             />
             <Text style={[styles.noResultsTitle, { color: palette.text }]}>
-              Không tìm thấy cuộc trò chuyện
+              {t('messaging.noResultsTitle')}
             </Text>
             <Text style={[styles.noResultsText, { color: palette.muted }]}>
-              Thử đổi từ khóa hoặc bộ lọc.
+              {t('messaging.noResultsMessage')}
             </Text>
           </View>
         )}
@@ -237,7 +282,7 @@ export function ConversationList({
 
       {conversations.hasNextPage ? (
         <Button
-          label="Xem thêm"
+          label={t('messaging.loadMore')}
           variant="secondary"
           loading={conversations.isFetchingNextPage}
           onPress={() => void conversations.fetchNextPage()}
@@ -247,7 +292,13 @@ export function ConversationList({
   );
 }
 
-function MessagesHeader({ palette }: { palette: Palette }) {
+function MessagesHeader({
+  palette,
+  title,
+}: {
+  palette: Palette;
+  title: string;
+}) {
   return (
     <View
       style={[
@@ -270,7 +321,7 @@ function MessagesHeader({ palette }: { palette: Palette }) {
           </Text>
         </View>
         <Text style={[styles.headerTitle, { color: palette.text }]}>
-          Messages
+          {title}
         </Text>
       </View>
     </View>
@@ -281,15 +332,22 @@ function ConversationRow({
   conversation,
   match,
   palette,
+  onPrefetch,
   onPress,
+  t,
+  locale,
 }: {
   conversation: ConversationRuntime;
   match?: MatchResponse;
   palette: Palette;
+  onPrefetch: () => void;
   onPress: () => void;
+  t: Translate;
+  locale: Locale;
 }) {
   const counterpart = conversation.counterpart ?? match?.counterpart;
-  const name = counterpart?.displayName?.trim() || 'Photographer';
+  const name =
+    counterpart?.displayName?.trim() || t('discovery.matches.defaultName');
   const avatarAssetId = counterpart?.avatarAssetId ?? undefined;
   const avatarQuery = useQuery({
     queryKey: ['conversation-avatar', avatarAssetId],
@@ -303,8 +361,9 @@ function ConversationRow({
 
   return (
     <Pressable
-      accessibilityLabel={`Mở cuộc trò chuyện với ${name}`}
+      accessibilityLabel={t('messaging.openConversation', { name })}
       accessibilityRole="button"
+      onPressIn={onPrefetch}
       onPress={onPress}
       style={({ pressed }) => [
         styles.row,
@@ -333,7 +392,9 @@ function ConversationRow({
             </View>
           )}
           {(counterpart as { isOnline?: boolean } | undefined)?.isOnline ? (
-            <View style={styles.onlineDot} />
+            <View
+              style={[styles.onlineDot, { borderColor: palette.surface }]}
+            />
           ) : null}
         </View>
         <View style={styles.rowCopy}>
@@ -356,6 +417,8 @@ function ConversationRow({
             >
               {formatTimestamp(
                 conversation.lastMessageAt ?? conversation.createdAt,
+                locale,
+                t,
               )}
             </Text>
           </View>
@@ -368,7 +431,7 @@ function ConversationRow({
                 unread && styles.unreadText,
               ]}
             >
-              {getPreview(conversation)}
+              {getPreview(conversation, t)}
             </Text>
             {conversation.unreadCount && conversation.unreadCount > 0 ? (
               <View style={styles.unreadBadge}>
@@ -401,16 +464,30 @@ function isUnread(conversation: ConversationRuntime) {
   );
 }
 
-function getPreview(conversation: ConversationRuntime) {
+function getConversationSummary(
+  conversation: ConversationRuntime,
+  match?: MatchResponse,
+): ConversationSummary {
+  const counterpart = conversation.counterpart ?? match?.counterpart;
+  return {
+    id: conversation.id,
+    matchId: conversation.matchId,
+    status: conversation.status,
+    displayName: counterpart?.displayName,
+    avatarAssetId: counterpart?.avatarAssetId,
+  };
+}
+
+function getPreview(conversation: ConversationRuntime, t: Translate) {
   const content = conversation.lastMessage?.content?.trim();
   if (content) return content;
   const messageType = conversation.lastMessage?.messageType;
-  if (messageType === 'IMAGE') return 'Đã gửi một ảnh';
-  if (messageType === 'FILE') return 'Đã gửi một tệp';
-  if (messageType === 'SYSTEM') return 'Tin nhắn hệ thống';
+  if (messageType === 'IMAGE') return t('messaging.image');
+  if (messageType === 'FILE') return t('messaging.file');
+  if (messageType === 'SYSTEM') return t('messaging.system');
   return conversation.lastMessageAt
-    ? 'Trò chuyện đã sẵn sàng'
-    : 'Chưa có tin nhắn';
+    ? t('messaging.conversationTitle')
+    : t('messaging.noMessages');
 }
 
 function getInitials(name: string) {
@@ -422,24 +499,34 @@ function getInitials(name: string) {
   ).toUpperCase();
 }
 
-function formatTimestamp(value?: string | null) {
+function formatTimestamp(
+  value: string | undefined | null,
+  locale: Locale,
+  t: Translate,
+) {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   const now = new Date();
   const sameDay = date.toDateString() === now.toDateString();
   if (sameDay)
-    return date.toLocaleTimeString('vi-VN', {
+    return date.toLocaleTimeString(locale === 'en' ? 'en-US' : 'vi-VN', {
       hour: '2-digit',
       minute: '2-digit',
     });
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
-  if (date.toDateString() === yesterday.toDateString()) return 'Hôm qua';
+  if (date.toDateString() === yesterday.toDateString())
+    return t('messaging.yesterday');
   if (now.getTime() - date.getTime() < 7 * 24 * 60 * 60 * 1000) {
-    return date.toLocaleDateString('vi-VN', { weekday: 'short' });
+    return date.toLocaleDateString(locale === 'en' ? 'en-US' : 'vi-VN', {
+      weekday: 'short',
+    });
   }
-  return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+  return date.toLocaleDateString(locale === 'en' ? 'en-US' : 'vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+  });
 }
 
 const styles = StyleSheet.create({
@@ -479,7 +566,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
+    borderRadius: radius.sheet,
   },
   searchInput: {
     flex: 1,
@@ -507,7 +594,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
   },
   filterText: { fontFamily: typography.semibold, fontSize: 13 },
-  list: { gap: spacing.sm },
+  list: { gap: 0 },
+  rowSeparator: {
+    height: StyleSheet.hairlineWidth,
+    marginVertical: spacing.md,
+    marginHorizontal: spacing.md,
+    opacity: 1,
+  },
   row: {
     width: '100%',
     minHeight: 78,
@@ -538,9 +631,8 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderWidth: 2,
-    borderColor: colors.light.surface,
     borderRadius: 7,
-    backgroundColor: '#22C55E',
+    backgroundColor: colors.success,
   },
   rowCopy: { flex: 1, gap: spacing.xs },
   rowTopLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -563,7 +655,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand,
   },
   unreadBadgeText: {
-    color: '#FFFFFF',
+    color: colors.onBrand,
     fontFamily: typography.bold,
     fontSize: 11,
   },

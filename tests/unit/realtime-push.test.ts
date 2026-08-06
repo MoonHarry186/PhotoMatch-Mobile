@@ -22,6 +22,24 @@ describe('versioned realtime and push parsers', () => {
     ).toEqual(expect.objectContaining({ type: 'booking.status_changed' }));
   });
 
+  it('accepts conversation typing events', () => {
+    expect(
+      parseRealtimeEvent('conversation.typing', {
+        version: 1,
+        conversationId: id,
+        userId: id,
+        isTyping: true,
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        type: 'conversation.typing',
+        conversationId: id,
+        userId: id,
+        isTyping: true,
+      }),
+    );
+  });
+
   it('infers compact API push payloads and rejects malformed values', () => {
     expect(parsePushPayload({ bookingId: id })).toEqual({
       version: 1,

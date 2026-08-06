@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { MessageView } from './messaging.types';
+import { isSameMessage, type MessageView } from './messaging.types';
 
 type MessagingState = {
   messages: Record<string, MessageView[]>;
@@ -21,9 +21,7 @@ export const useMessagingStore = create<MessagingState>((set) => ({
         ...state.messages,
         [conversationId]: [
           ...(state.messages[conversationId] ?? []).filter(
-            (item) =>
-              item.id !== value.id &&
-              item.clientMessageId !== value.clientMessageId,
+            (item) => !isSameMessage(item, value),
           ),
           value,
         ],

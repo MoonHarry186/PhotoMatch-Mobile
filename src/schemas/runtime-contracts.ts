@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 const id = z.uuid();
 const version = z.literal(1);
+const messageType = z.enum(['TEXT', 'SYSTEM', 'IMAGE', 'FILE']);
+const messageStatus = z.enum(['SENT', 'DELIVERED', 'FAILED']);
 
 export const realtimeEventSchema = z.discriminatedUnion('type', [
   z.object({
@@ -9,6 +11,13 @@ export const realtimeEventSchema = z.discriminatedUnion('type', [
     type: z.literal('conversation.message.created'),
     conversationId: id,
     id,
+    senderUserId: id.optional(),
+    clientMessageId: z.string().optional(),
+    messageType: messageType.optional(),
+    content: z.string().nullable().optional(),
+    assetId: id.nullable().optional(),
+    status: messageStatus.optional(),
+    sentAt: z.iso.datetime().optional(),
   }),
   z.object({
     version,
@@ -20,6 +29,13 @@ export const realtimeEventSchema = z.discriminatedUnion('type', [
     ]),
     conversationId: id,
     messageId: id,
+  }),
+  z.object({
+    version,
+    type: z.literal('conversation.typing'),
+    conversationId: id,
+    userId: id,
+    isTyping: z.boolean(),
   }),
   z.object({ version, type: z.literal('match.created'), matchId: id }),
   z.object({

@@ -29,6 +29,16 @@ export const queryKeys = {
   match: (value: Scope, matchId: string) =>
     [...scope(value), 'matches', matchId] as const,
   conversations: (value: Scope) => [...scope(value), 'conversations'] as const,
+  // Key dùng chung cho HTTP cache và các event message/receipt từ WebSocket.
+  conversationMessages: (value: Scope, conversationId: string) =>
+    [
+      ...scope(value),
+      'conversation',
+      'detail',
+      conversationId,
+      'messages',
+      conversationId,
+    ] as const,
   bookings: (value: Scope, filters: object = {}) =>
     [...scope(value), 'bookings', filters] as const,
   booking: (value: Scope, bookingId: string) =>

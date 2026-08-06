@@ -12,7 +12,13 @@ import type {
 } from '@/generated/api/types.gen';
 import { unwrap } from '@/services/api/result';
 
-import { reconcileMessages, type MessageView } from './messaging.types';
+import { normalizeMessageReceipts, reconcileMessages } from './messaging.types';
+
+const receiptRequests = new Map<
+  string,
+  ReturnType<typeof messagingControllerReceipt>
+>();
+const completedReceipts = new Set<string>();
 
 export const messagingApi = {
   async conversations(cursor?: string, signal?: AbortSignal) {
@@ -47,7 +53,7 @@ export const messagingApi = {
       }),
     );
     return {
-      items: page.items as MessageView[],
+      items: page.items.map((message) => normalizeMessageReceipts(message)),
       nextCursor: page.nextCursor ?? undefined,
     };
   },
@@ -57,25 +63,43 @@ export const messagingApi = {
     input: SendMessageDto,
     signal?: AbortSignal,
   ) {
-    return unwrap(
+    const message = unwrap(
       await messagingControllerSend({
         path: { conversationId },
         body: input,
         signal,
       }),
     );
+    return normalizeMessageReceipts(message);
   },
 
-  async receipt(
+  receipt(
     conversationId: string,
     messageId: string,
     type: 'delivered' | 'read',
   ) {
-    return unwrap(
-      await messagingControllerReceipt({
-        path: { conversationId, messageId },
-        body: { type },
-      }),
+    const key = `${conversationId}:${messageId}:${type}`;
+    if (completedReceipts.has(key)) return Promise.resolve({ messageId, type });
+    const inFlight = receiptRequests.get(key);
+    if (inFlight) return inFlight.then(unwrap);
+
+    // Provider và màn hình dùng chung request nếu cùng xác nhận một receipt.
+    const request = messagingControllerReceipt({
+      path: { conversationId, messageId },
+      body: { type },
+    });
+    receiptRequests.set(key, request);
+    return request.then(
+      (result) => {
+        receiptRequests.delete(key);
+        const receipt = unwrap(result);
+        completedReceipts.add(key);
+        return receipt;
+      },
+      (error: unknown) => {
+        receiptRequests.delete(key);
+        throw error;
+      },
     );
   },
 
